@@ -1,13 +1,18 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useHylex, useDispatch } from '../store/HylexContext';
 import {
   Wifi, WifiOff, Activity, Radio, Zap, RotateCcw, FlaskConical,
-  ChevronRight, Settings, Shield, FileText, Tv
+  Shield, FileText, Tv, Sliders, BrainCircuit, Bot
 } from 'lucide-react';
 import SynopsisModal from './SynopsisModal';
 import HmiModal from './HmiModal';
 
-export default function ConnectionBar() {
+export default function ConnectionBar({
+  activeView = 'dashboard',
+  setActiveView = () => {},
+  isCopilotOpen = false,
+  setIsCopilotOpen = () => {}
+}) {
   const { state, connect, disconnect } = useHylex();
   const dispatch = useDispatch();
   const [localUrl, setLocalUrl] = useState(state.wsUrl);
@@ -61,7 +66,7 @@ export default function ConnectionBar() {
   return (
     <>
       <header className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-900/90 border-b border-slate-800 backdrop-blur-sm flex-shrink-0">
-        {/* Logo */}
+        {/* Brand Logo */}
         <div className="flex items-center gap-2 mr-1">
           <div className="relative">
             <Shield size={20} className="text-cyan-400" />
@@ -75,11 +80,41 @@ export default function ConnectionBar() {
 
         <div className="w-px h-7 bg-slate-800" />
 
-        {/* Mode Toggle */}
+        {/* Navigation View Switcher (Dashboard vs AI Intelligence Suite) */}
+        <div className="flex items-center bg-slate-950/80 rounded-lg p-0.5 border border-slate-800">
+          <button
+            onClick={() => setActiveView('dashboard')}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono font-medium transition-all ${
+              activeView === 'dashboard'
+                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+            }`}
+          >
+            <Sliders size={12} className={activeView === 'dashboard' ? 'text-cyan-400' : 'text-slate-500'} />
+            <span>DIGITAL TWIN</span>
+          </button>
+
+          <button
+            onClick={() => setActiveView('ai')}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono font-medium transition-all ${
+              activeView === 'ai'
+                ? 'bg-purple-500/25 text-purple-200 border border-purple-500/50 shadow-sm'
+                : 'text-slate-400 hover:text-slate-200 border border-transparent'
+            }`}
+          >
+            <BrainCircuit size={12} className={activeView === 'ai' ? 'text-purple-400' : 'text-slate-500'} />
+            <span>AI INTELLIGENCE SUITE</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse ml-0.5" />
+          </button>
+        </div>
+
+        <div className="w-px h-7 bg-slate-800" />
+
+        {/* Telemetry Hardware Mode Toggle */}
         <div className="flex items-center bg-slate-800/60 rounded p-0.5 gap-0.5">
           <button
             onClick={() => dispatch({ type: 'SET_MODE', payload: 'simulation' })}
-            className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
+            className={`px-2 py-1 rounded text-xs font-medium transition-all ${
               isSim
                 ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
                 : 'text-slate-500 hover:text-slate-300'
@@ -89,7 +124,7 @@ export default function ConnectionBar() {
           </button>
           <button
             onClick={() => dispatch({ type: 'SET_MODE', payload: 'live' })}
-            className={`px-2.5 py-1 rounded text-xs font-medium transition-all ${
+            className={`px-2 py-1 rounded text-xs font-medium transition-all ${
               isLive
                 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
                 : 'text-slate-500 hover:text-slate-300'
@@ -107,21 +142,21 @@ export default function ConnectionBar() {
               <input
                 value={localUrl}
                 onChange={e => { setLocalUrl(e.target.value); dispatch({ type: 'SET_WS_URL', payload: e.target.value }); }}
-                className="bg-transparent text-xs font-mono text-slate-300 w-44 outline-none"
+                className="bg-transparent text-xs font-mono text-slate-300 w-40 outline-none"
                 placeholder="ws://192.168.4.1:81"
               />
             </div>
             {state.wsStatus === 'connected' ? (
               <button
                 onClick={disconnect}
-                className="px-2.5 py-1 rounded text-xs bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 transition-all"
+                className="px-2 py-1 rounded text-xs bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 transition-all"
               >
                 DISCONNECT
               </button>
             ) : (
               <button
                 onClick={connect}
-                className="px-2.5 py-1 rounded text-xs bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 transition-all"
+                className="px-2 py-1 rounded text-xs bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 transition-all"
               >
                 CONNECT
               </button>
@@ -136,30 +171,30 @@ export default function ConnectionBar() {
         {/* Judge Demo Bar — Simulation only */}
         {isSim && (
           <div className="flex items-center gap-1.5">
-            <span className="text-[9px] text-slate-600 uppercase tracking-widest font-mono">Demo:</span>
+            <span className="text-[9px] text-slate-500 uppercase tracking-widest font-mono hidden xl:inline">Demo:</span>
 
             <button
               onClick={() => dispatch({ type: 'SIM_INJECT_RAW' })}
-              className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500/50 transition-all"
+              className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500/50 transition-all"
               title="Inject Raw Brine (>500 ppm triggers Recirculation to Tank A)"
             >
               <FlaskConical size={11} />
-              Raw Brine (780 ppm)
+              <span>Raw (780 ppm)</span>
             </button>
 
             <button
               onClick={() => dispatch({ type: 'SIM_VORTEX_CLEAN' })}
-              className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/50 transition-all"
+              className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/50 transition-all"
               title="Vortex Clarified (<=500 ppm routes Clean to Tank B)"
             >
               <Zap size={11} />
-              Vortex Clarified (380 ppm)
+              <span>Clarified (380 ppm)</span>
             </button>
 
             <button
               onClick={handleTurretIndex}
               disabled={turretCooldown}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-all ${
+              className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all ${
                 turretCooldown
                   ? 'bg-slate-800/50 border border-slate-700 text-slate-600 cursor-not-allowed'
                   : 'bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 hover:border-amber-500/50'
@@ -167,34 +202,49 @@ export default function ConnectionBar() {
               title="Pinch cutoff chute for 3s and rotate 28BYJ-48 stepper 120°"
             >
               <RotateCcw size={11} className={turretCooldown ? 'animate-spin' : ''} />
-              Index Turret (120°)
+              <span>Turret (120°)</span>
             </button>
           </div>
         )}
 
-        {/* Right side modals & project brand */}
+        {/* Right side modals & AI assistant toggle */}
         <div className="ml-auto flex items-center gap-2">
+          {/* Quick AI Co-Pilot Slide-over Trigger */}
+          <button
+            onClick={() => setIsCopilotOpen(!isCopilotOpen)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono font-medium transition-all shadow-sm ${
+              isCopilotOpen
+                ? 'bg-cyan-500/25 border border-cyan-500/50 text-cyan-200'
+                : 'bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300'
+            }`}
+            title="Toggle Quick Hylex AI Co-Pilot Drawer"
+          >
+            <Bot size={13} className="text-cyan-400" />
+            <span>CO-PILOT</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block animate-pulse" />
+          </button>
+
           {/* Arduino TFT HMI Modal Trigger */}
           <button
             onClick={() => setIsHmiOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-mono text-cyan-300 transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-mono text-cyan-300 transition-all shadow-sm"
           >
             <Tv size={12} className="text-cyan-400" />
-            <span>3.5" TFT HMI</span>
+            <span>HMI</span>
           </button>
 
           {/* Project Dossier / Synopsis Modal Trigger */}
           <button
             onClick={() => setIsSynopsisOpen(true)}
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-xs font-mono text-emerald-300 transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-2 py-1 rounded bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-xs font-mono text-emerald-300 transition-all shadow-sm"
           >
             <FileText size={12} className="text-emerald-400" />
             <span>DOSSIER</span>
           </button>
 
-          <div className="w-px h-7 bg-slate-800" />
+          <div className="w-px h-7 bg-slate-800 hidden sm:block" />
 
-          <div className="text-right">
+          <div className="text-right hidden sm:block">
             <div className="text-[9px] text-slate-400 font-mono font-bold leading-tight">PROJECT HYLEX</div>
             <div className="text-[8px] text-slate-500 font-mono leading-tight">GEMS 2026 · UN SDG 6</div>
           </div>

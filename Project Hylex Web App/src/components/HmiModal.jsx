@@ -2,10 +2,11 @@ import { X, Tv, RefreshCw, Zap, Activity, Cpu } from 'lucide-react';
 import { useHylex, useDispatch } from '../store/HylexContext';
 
 export default function HmiModal({ isOpen, onClose }) {
-  if (!isOpen) return null;
-
   const { state } = useHylex();
   const dispatch = useDispatch();
+
+  if (!isOpen) return null;
+
   const { tds, tempC, routeClean, carouselSlot, podSaturation, servo1, servo2, servo3, servo4, relay1, relay2, relay3 } = state;
 
   const EC25 = (tds / (1 + 0.02 * (tempC - 25))).toFixed(1);
