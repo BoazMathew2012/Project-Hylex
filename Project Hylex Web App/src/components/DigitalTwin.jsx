@@ -16,20 +16,20 @@ function ServoArc({ cx, cy, r, angle, color, label }) {
   return (
     <g>
       {/* Background track */}
-      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#1e293b" strokeWidth="3" />
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#1e293b" strokeWidth="2.5" />
       {/* Active arc */}
       {clampedAngle > 0 && (
         <path
           d={`M${x1},${y1} A${r},${r} 0 ${largeArc},1 ${x2},${y2}`}
-          fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" opacity="0.9"
+          fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" opacity="0.9"
         />
       )}
       {/* Needle */}
       <line x1={cx} y1={cy} x2={nx} y2={ny} stroke={color} strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx={cx} cy={cy} r="2.5" fill={color} />
+      <circle cx={cx} cy={cy} r="2" fill={color} />
       {/* Labels */}
-      <text x={cx} y={cy + r + 9} textAnchor="middle" fontSize="6.5" fill="#64748b" fontFamily="JetBrains Mono">{label}</text>
-      <text x={cx} y={cy + r + 18} textAnchor="middle" fontSize="8" fill={color} fontFamily="JetBrains Mono" fontWeight="700">{angle}°</text>
+      <text x={cx} y={cy + r + 10} textAnchor="middle" fontSize="7.5" fill="#94a3b8" fontFamily="JetBrains Mono">{label}</text>
+      <text x={cx} y={cy + r + 20} textAnchor="middle" fontSize="8.5" fill={color} fontFamily="JetBrains Mono" fontWeight="600">{angle}°</text>
     </g>
   );
 }
@@ -43,22 +43,22 @@ function PodCircle({ cx, cy, r, saturation, slot, currentSlot, label }) {
 
   return (
     <g>
-      <circle cx={cx} cy={cy} r={r} fill="#0b1324" stroke={isActive ? podColor : '#334155'} strokeWidth={isActive ? 2 : 1} />
+      <circle cx={cx} cy={cy} r={r} fill="#091325" stroke={isActive ? podColor : '#334155'} strokeWidth={isActive ? 1.8 : 1} />
       {/* Saturation ring */}
       <circle
         cx={cx} cy={cy} r={r - 3}
-        fill="none" stroke={podColor} strokeWidth="3.5"
+        fill="none" stroke={podColor} strokeWidth="3"
         strokeDasharray={circumference}
         strokeDashoffset={dashOffset}
         strokeLinecap="round"
         transform={`rotate(-90 ${cx} ${cy})`}
-        opacity="0.8"
+        opacity="0.85"
       />
-      <text x={cx} y={cy - 3} textAnchor="middle" fontSize="7" fill="#94a3b8" fontFamily="JetBrains Mono" fontWeight="600">{label}</text>
-      <text x={cx} y={cy + 8} textAnchor="middle" fontSize="8.5" fill={podColor} fontFamily="JetBrains Mono" fontWeight="700">{saturation.toFixed(0)}%</text>
+      <text x={cx} y={cy - 2} textAnchor="middle" fontSize="7.5" fill="#cbd5e1" fontFamily="JetBrains Mono" fontWeight="600">{label}</text>
+      <text x={cx} y={cy + 9} textAnchor="middle" fontSize="9" fill={podColor} fontFamily="JetBrains Mono" fontWeight="700">{saturation.toFixed(0)}%</text>
       {isActive && (
-        <circle cx={cx} cy={cy} r={r + 3.5} fill="none" stroke={podColor} strokeWidth="1" opacity="0.4">
-          <animate attributeName="r" values={`${r + 2};${r + 7};${r + 2}`} dur="2s" repeatCount="indefinite" />
+        <circle cx={cx} cy={cy} r={r + 3} fill="none" stroke={podColor} strokeWidth="1" opacity="0.4">
+          <animate attributeName="r" values={`${r + 2};${r + 6};${r + 2}`} dur="2s" repeatCount="indefinite" />
           <animate attributeName="opacity" values="0.4;0.05;0.4" dur="2s" repeatCount="indefinite" />
         </circle>
       )}
@@ -73,14 +73,14 @@ function FlowLine({ points, active, color }) {
   return (
     <path d={d} fill="none" stroke={color} strokeWidth="2.5" strokeDasharray="5 4"
       strokeLinecap="round" opacity="0.85">
-      <animate attributeName="stroke-dashoffset" from="18" to="0" dur="0.7s" repeatCount="indefinite" />
+      <animate attributeName="stroke-dashoffset" from="18" to="0" dur="0.8s" repeatCount="indefinite" />
     </path>
   );
 }
 
 export default function DigitalTwin() {
   const { state } = useHylex();
-  const { servo1, servo2, servo3, servo4, carouselAngle, podSaturation, carouselSlot, routeClean, relay1, relay2, relay3 } = state;
+  const { servo1, servo2, servo3, servo4, carouselAngle, podSaturation, carouselSlot, routeClean, relay2, relay3 } = state;
 
   const W = 320;
   const H = 600;
@@ -105,12 +105,19 @@ export default function DigitalTwin() {
   });
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/80 backdrop-blur-sm p-2.5 flex flex-col border-glow-cyan h-full overflow-hidden">
+    <div className="rounded-xl border border-slate-800 bg-slate-900/85 backdrop-blur-sm p-3 flex flex-col h-full overflow-hidden shadow-sm">
       {/* Top Header */}
-      <div className="flex items-center justify-between mb-1 flex-shrink-0">
-        <span className="text-[10px] text-slate-400 uppercase tracking-widest font-mono font-bold">4-Tier Digital Twin</span>
-        <span className="text-[9px] text-cyan-400 font-mono px-1.5 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/30">
-          450mm TOWER
+      <div className="flex items-center justify-between mb-2 flex-shrink-0">
+        <div>
+          <span className="text-xs font-sans font-semibold text-white tracking-wide">
+            4-Tier Tower Schematic
+          </span>
+          <div className="text-[10px] text-slate-400 font-sans">
+            Membraneless hydro-cyclone &amp; electrochemical crystallization
+          </div>
+        </div>
+        <span className="text-[10px] text-cyan-300 font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30">
+          450mm Column
         </span>
       </div>
 
@@ -122,35 +129,31 @@ export default function DigitalTwin() {
             <stop offset="100%" stopColor="#0e7490" stopOpacity="0.4" />
           </linearGradient>
           <linearGradient id="tank-a-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#92400e" stopOpacity="0.75" />
-            <stop offset="100%" stopColor="#7c2d12" stopOpacity="0.3" />
+            <stop offset="0%" stopColor="#92400e" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#7c2d12" stopOpacity="0.25" />
           </linearGradient>
           <linearGradient id="tank-b-grad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#065f46" stopOpacity="0.75" />
-            <stop offset="100%" stopColor="#064e3b" stopOpacity="0.3" />
+            <stop offset="0%" stopColor="#065f46" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#064e3b" stopOpacity="0.25" />
           </linearGradient>
-          <filter id="glow-c" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="1.5" result="blur" />
-            <feComposite in="SourceGraphic" in2="blur" operator="over" />
-          </filter>
         </defs>
 
         {/* ══════════════════════════════════════════════
             STAGE 2: Membraneless Centrifugal Vortex
         ══════════════════════════════════════════════ */}
-        <text x={MX} y="11" textAnchor="middle" fontSize="6.5" fill="#64748b" fontFamily="JetBrains Mono" fontWeight="600">
-          STAGE 2: MEMBRANELESS VORTEX (ARCHIMEDEAN HELIX)
+        <text x={MX} y="11" textAnchor="middle" fontSize="7.5" fill="#94a3b8" fontFamily="Inter, sans-serif" fontWeight="600">
+          Stage 2: Membraneless Vortex Helix
         </text>
 
         {/* 10mm Brass Splitter & Tangential Nozzle Indicators */}
         <rect x="52" y="24" width="16" height="6" rx="2" fill="#ca8a04" stroke="#eab308" strokeWidth="0.8" />
         <rect x="252" y="24" width="16" height="6" rx="2" fill="#ca8a04" stroke="#eab308" strokeWidth="0.8" />
-        <text x="60" y="22" textAnchor="middle" fontSize="5" fill="#eab308" fontFamily="JetBrains Mono">90° NOZZLE</text>
-        <text x="260" y="22" textAnchor="middle" fontSize="5" fill="#eab308" fontFamily="JetBrains Mono">90° NOZZLE</text>
+        <text x="60" y="22" textAnchor="middle" fontSize="6" fill="#eab308" fontFamily="JetBrains Mono">90° Nozzle</text>
+        <text x="260" y="22" textAnchor="middle" fontSize="6" fill="#eab308" fontFamily="JetBrains Mono">90° Nozzle</text>
 
         {/* 90mm Acrylic Cylinder */}
         <rect x="68" y="16" width="184" height="88" rx="8" fill="url(#cyl-grad)" stroke="#22d3ee" strokeWidth="1.2" opacity="0.85" />
-        <text x="76" y="97" fontSize="6" fill="#64748b" fontFamily="JetBrains Mono">⌀90mm Acrylic Cylinder</text>
+        <text x="76" y="97" fontSize="7" fill="#94a3b8" fontFamily="JetBrains Mono">Ø90mm Acrylic Cylinder</text>
 
         {/* Triple-Helix Spiral Ramps */}
         {[0, 1, 2].map(j => (
@@ -163,14 +166,14 @@ export default function DigitalTwin() {
             }).join(' ')}
             fill="none"
             stroke={['#22d3ee', '#34d399', '#06b6d4'][j]}
-            strokeWidth="1.8" opacity="0.7" strokeLinecap="round"
+            strokeWidth="1.8" opacity="0.75" strokeLinecap="round"
           />
         ))}
 
         {/* Animated swirling particles */}
         {[0, 1, 2, 3, 4].map(i => (
-          <circle key={i} r="2.8" fill="#22d3ee" opacity="0.85" filter="url(#glow-c)">
-            <animateMotion dur={`${1.3 + i * 0.28}s`} begin={`${i * 0.26}s`} repeatCount="indefinite"
+          <circle key={i} r="2.5" fill="#22d3ee" opacity="0.85">
+            <animateMotion dur={`${1.4 + i * 0.3}s`} begin={`${i * 0.28}s`} repeatCount="indefinite"
               path={Array.from({ length: 20 }, (_, k) => {
                 const t = k / 19;
                 const x = 84 + 152 * t;
@@ -181,25 +184,25 @@ export default function DigitalTwin() {
         ))}
 
         {/* Concentric Bullseye Splitter Collar */}
-        <rect x="120" y="100" width="80" height="8" rx="2" fill="#1e293b" stroke="#334155" strokeWidth="1" />
-        <text x={MX} y="106" textAnchor="middle" fontSize="5.5" fill="#38bdf8" fontFamily="JetBrains Mono">BULLSEYE SPLITTER</text>
+        <rect x="115" y="100" width="90" height="8" rx="2" fill="#1e293b" stroke="#334155" strokeWidth="1" />
+        <text x={MX} y="106" textAnchor="middle" fontSize="6.5" fill="#38bdf8" fontFamily="JetBrains Mono" fontWeight="600">BULLSEYE SPLITTER</text>
 
         {/* Inter-tier connector pipe */}
-        <line x1={MX} y1="108" x2={MX} y2="124" stroke="#334155" strokeWidth="7" strokeLinecap="round" />
+        <line x1={MX} y1="108" x2={MX} y2="124" stroke="#334155" strokeWidth="6" strokeLinecap="round" />
         <line x1={MX} y1="108" x2={MX} y2="124" stroke="#22d3ee" strokeWidth="1.2" opacity="0.5" />
 
         {/* ══════════════════════════════════════════════
             STAGE 3: Sensor Chamber & 4x Servos
         ══════════════════════════════════════════════ */}
-        <text x={MX} y="121" textAnchor="middle" fontSize="6.5" fill="#64748b" fontFamily="JetBrains Mono" fontWeight="600">
-          STAGE 3: SENSOR CHAMBER &amp; 4x MG995 SERVOS
+        <text x={MX} y="121" textAnchor="middle" fontSize="7.5" fill="#94a3b8" fontFamily="Inter, sans-serif" fontWeight="600">
+          Stage 3: Sensor Chamber &amp; 4x Servos
         </text>
 
         <rect x="52" y="125" width="216" height="106" rx="7" fill="#091322" stroke="#1e293b" strokeWidth="1.2" />
 
         {/* Gravity TDS sensor readout pill */}
         <rect x="105" y="130" width="110" height="19" rx="4" fill="#0f172a" stroke="#22d3ee" strokeWidth="0.9" />
-        <text x={MX} y="143" textAnchor="middle" fontSize="8" fill="#22d3ee" fontFamily="JetBrains Mono" fontWeight="600">
+        <text x={MX} y="143" textAnchor="middle" fontSize="8.5" fill="#22d3ee" fontFamily="JetBrains Mono" fontWeight="600">
           TDS {state.tds.toFixed(0)} ppm · {state.tempC.toFixed(1)}°C
         </text>
 
@@ -210,18 +213,18 @@ export default function DigitalTwin() {
         <ServoArc cx={242} cy={176} r={17} angle={servo4} color="#f87171" label="S4 Brine" />
 
         {/* Inter-tier connector pipe */}
-        <line x1={MX} y1="231" x2={MX} y2="252" stroke="#334155" strokeWidth="7" strokeLinecap="round" />
+        <line x1={MX} y1="231" x2={MX} y2="252" stroke="#334155" strokeWidth="6" strokeLinecap="round" />
         <line x1={MX} y1="231" x2={MX} y2="252" stroke="#22d3ee" strokeWidth="1.2" opacity="0.4" />
 
         {/* ══════════════════════════════════════════════
             STAGE 4: Robotic Turret & Electro-Crystallization
         ══════════════════════════════════════════════ */}
-        <text x={MX} y="250" textAnchor="middle" fontSize="6.5" fill="#64748b" fontFamily="JetBrains Mono" fontWeight="600">
-          STAGE 4: 3-SLOT TURRET &amp; ELECTRO-CRYSTALLISATION
+        <text x={MX} y="250" textAnchor="middle" fontSize="7.5" fill="#94a3b8" fontFamily="Inter, sans-serif" fontWeight="600">
+          Stage 4: 3-Slot Turret &amp; Crystallization
         </text>
 
         {/* Stepper motor drive badge */}
-        <text x="75" y="262" fontSize="5.5" fill="#a855f7" fontFamily="JetBrains Mono">28BYJ-48 (64:1 GEAR)</text>
+        <text x="75" y="262" fontSize="6.5" fill="#a855f7" fontFamily="JetBrains Mono">28BYJ-48 Stepper</text>
 
         {/* Carousel outer ring + gear teeth */}
         <circle cx={carCX} cy={carCY} r={carR + podR + 5} fill="#070e1a" stroke="#1e293b" strokeWidth="1.2" />
@@ -252,12 +255,7 @@ export default function DigitalTwin() {
 
         {/* Hub */}
         <circle cx={carCX} cy={carCY} r={11} fill="#1e293b" stroke="#334155" strokeWidth="1" />
-        <text x={carCX} y={carCY + 4} textAnchor="middle" fontSize="6" fill={relay2 ? '#fbbf24' : '#475569'} fontFamily="JetBrains Mono" fontWeight="bold">12V EC</text>
-        {relay2 && (
-          <circle cx={carCX} cy={carCY} r={13} fill="none" stroke="#fbbf24" strokeWidth="0.8" opacity="0.6">
-            <animate attributeName="opacity" values="0.6;0.1;0.6" dur="0.8s" repeatCount="indefinite" />
-          </circle>
-        )}
+        <text x={carCX} y={carCY + 4} textAnchor="middle" fontSize="6.5" fill={relay2 ? '#fbbf24' : '#475569'} fontFamily="JetBrains Mono" fontWeight="bold">12V EC</text>
 
         {/* 3 Pod Circles */}
         {pods.map((pod, i) => (
@@ -267,8 +265,8 @@ export default function DigitalTwin() {
         ))}
 
         {/* Active Pod status */}
-        <text x={carCX} y="405" textAnchor="middle" fontSize="6.5" fill="#94a3b8" fontFamily="JetBrains Mono">
-          Active: Pod #{carouselSlot + 1} (Graphite +12V / SS -12V) · Green H₂ Vent
+        <text x={carCX} y="405" textAnchor="middle" fontSize="7" fill="#cbd5e1" fontFamily="JetBrains Mono">
+          Active: Pod #{carouselSlot + 1} (Graphite +12V / SS304 -12V)
         </text>
 
         {/* Connector to tanks */}
@@ -277,8 +275,8 @@ export default function DigitalTwin() {
         {/* ══════════════════════════════════════════════
             STAGE 1 & 3: Dual Tank Base Architecture
         ══════════════════════════════════════════════ */}
-        <text x={MX} y="430" textAnchor="middle" fontSize="6.5" fill="#64748b" fontFamily="JetBrains Mono" fontWeight="600">
-          STAGE 1 &amp; 3: DUAL TANK BASE RESERVOIR
+        <text x={MX} y="430" textAnchor="middle" fontSize="7.5" fill="#94a3b8" fontFamily="Inter, sans-serif" fontWeight="600">
+          Stage 1 &amp; 3: Dual Reservoir Base
         </text>
 
         {/* Fluid routing flow lines */}
@@ -300,20 +298,20 @@ export default function DigitalTwin() {
               <rect x={tx} y={ty} width={tw} height={th} rx="7"
                 fill="url(#tank-a-grad)"
                 stroke={!routeClean ? '#f87171' : '#334155'}
-                strokeWidth={!routeClean ? 1.8 : 1} />
+                strokeWidth={!routeClean ? 1.6 : 1} />
               
               {/* Dynamic fluid level */}
               <rect x={tx + 2} y={ty + th - fillH} width={tw - 4} height={fillH} rx="5" fill="#f87171" opacity="0.15">
                 <animate attributeName="height" values={`${fillH * 0.9};${fillH};${fillH * 0.9}`} dur="6s" repeatCount="indefinite" />
               </rect>
 
-              <text x={tx + tw / 2} y={ty + 16} textAnchor="middle" fontSize="7.5" fill="#f87171" fontFamily="JetBrains Mono" fontWeight="700">
-                TANK A (STAGE 1)
+              <text x={tx + tw / 2} y={ty + 16} textAnchor="middle" fontSize="8" fill="#f87171" fontFamily="JetBrains Mono" fontWeight="700">
+                TANK A
               </text>
-              <text x={tx + tw / 2} y={ty + 27} textAnchor="middle" fontSize="6.5" fill="#cbd5e1" fontFamily="JetBrains Mono">
-                BASE BRINE RESERVOIR
+              <text x={tx + tw / 2} y={ty + 28} textAnchor="middle" fontSize="7" fill="#cbd5e1" fontFamily="Inter, sans-serif">
+                Base Brine Reservoir
               </text>
-              <text x={tx + tw / 2} y={ty + 37} textAnchor="middle" fontSize="5.5" fill="#94a3b8" fontFamily="JetBrains Mono">
+              <text x={tx + tw / 2} y={ty + 39} textAnchor="middle" fontSize="6.5" fill="#94a3b8" fontFamily="JetBrains Mono">
                 12V Pump · 240–400 L/hr
               </text>
 
@@ -326,13 +324,13 @@ export default function DigitalTwin() {
                       <animate attributeName="opacity" values="0.8;0.2;0.8" dur={`${0.4 + ox * 0.005}s`} repeatCount="indefinite" />
                     </line>
                   ))}
-                  <text x={tx + tw / 2} y={ty + 106} textAnchor="middle" fontSize="6" fill="#fbbf24" fontFamily="JetBrains Mono" fontWeight="bold">
+                  <text x={tx + tw / 2} y={ty + 106} textAnchor="middle" fontSize="6.5" fill="#fbbf24" fontFamily="JetBrains Mono" fontWeight="bold">
                     ⚡ EC PRE-TREAT ACTIVE
                   </text>
                 </>
               )}
               {!relay3 && (
-                <text x={tx + tw / 2} y={ty + 90} textAnchor="middle" fontSize="5.5" fill="#64748b" fontFamily="JetBrains Mono">
+                <text x={tx + tw / 2} y={ty + 90} textAnchor="middle" fontSize="6.5" fill="#64748b" fontFamily="JetBrains Mono">
                   NaHCO₃ · Mg²⁺/Ca²⁺ Flocs
                 </text>
               )}
@@ -349,31 +347,30 @@ export default function DigitalTwin() {
               <rect x={tx} y={ty} width={tw} height={th} rx="7"
                 fill="url(#tank-b-grad)"
                 stroke={routeClean ? '#34d399' : '#334155'}
-                strokeWidth={routeClean ? 1.8 : 1} />
+                strokeWidth={routeClean ? 1.6 : 1} />
 
               {/* Dynamic fluid level */}
               <rect x={tx + 2} y={ty + th - fillH} width={tw - 4} height={fillH} rx="5" fill="#34d399" opacity="0.15">
                 <animate attributeName="height" values={`${fillH * 0.9};${fillH};${fillH * 0.9}`} dur="7s" repeatCount="indefinite" />
               </rect>
 
-              <text x={tx + tw / 2} y={ty + 16} textAnchor="middle" fontSize="7.5" fill="#34d399" fontFamily="JetBrains Mono" fontWeight="700">
-                TANK B (STAGE 3)
+              <text x={tx + tw / 2} y={ty + 16} textAnchor="middle" fontSize="8" fill="#34d399" fontFamily="JetBrains Mono" fontWeight="700">
+                TANK B
               </text>
-              <text x={tx + tw / 2} y={ty + 27} textAnchor="middle" fontSize="6.5" fill="#cbd5e1" fontFamily="JetBrains Mono">
-                CLEAN POTABLE STORE
+              <text x={tx + tw / 2} y={ty + 28} textAnchor="middle" fontSize="7" fill="#cbd5e1" fontFamily="Inter, sans-serif">
+                Clean Potable Store
               </text>
-              <text x={tx + tw / 2} y={ty + 37} textAnchor="middle" fontSize="5.5" fill="#94a3b8" fontFamily="JetBrains Mono">
+              <text x={tx + tw / 2} y={ty + 39} textAnchor="middle" fontSize="6.5" fill="#94a3b8" fontFamily="JetBrains Mono">
                 ≤500 ppm Dubai Benchmark
               </text>
 
               {routeClean && (
-                <text x={tx + tw / 2} y={ty + 88} textAnchor="middle" fontSize="7.5" fill="#34d399" fontFamily="JetBrains Mono" fontWeight="bold">
+                <text x={tx + tw / 2} y={ty + 88} textAnchor="middle" fontSize="8" fill="#34d399" fontFamily="JetBrains Mono" fontWeight="bold">
                   ✓ CLEAN FILLING
-                  <animate attributeName="opacity" values="1;0.3;1" dur="1.5s" repeatCount="indefinite" />
                 </text>
               )}
-              <text x={tx + tw / 2} y={ty + 106} textAnchor="middle" fontSize="6" fill="#10b981" fontFamily="JetBrains Mono" fontWeight="bold">
-                UN SDG 6.3/6.4 VERIFIED
+              <text x={tx + tw / 2} y={ty + 106} textAnchor="middle" fontSize="6.5" fill="#10b981" fontFamily="JetBrains Mono" fontWeight="bold">
+                UN SDG 6.3/6.4 Verified
               </text>
             </g>
           );

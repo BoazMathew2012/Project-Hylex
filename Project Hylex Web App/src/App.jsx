@@ -14,7 +14,7 @@ function MainApp() {
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
 
   return (
-    <div className="flex flex-col h-screen bg-slate-950 overflow-hidden select-none">
+    <div className="flex flex-col h-screen bg-slate-950 text-slate-100 overflow-hidden select-none">
       {/* Top Connection & Navigation Bar */}
       <ConnectionBar
         activeView={activeView}
@@ -24,32 +24,38 @@ function MainApp() {
       />
 
       {/* Main Workspace Layout */}
-      <main className="flex-1 flex flex-col gap-2.5 p-2.5 overflow-hidden min-h-0 relative">
-        {/* KPI Ribbon (Universal across views) */}
+      <main className="flex-1 flex flex-col gap-3 p-3.5 overflow-hidden min-h-0 relative">
+        {/* Universal Top KPI Ribbon */}
         <KpiRibbon />
 
         {/* View 1: Digital Twin & Actuator Hardware Controls */}
         {activeView === 'dashboard' ? (
-          <div className="flex-1 grid gap-2.5 min-h-0" style={{ gridTemplateColumns: '1fr 1.25fr 0.8fr' }}>
-            {/* Left: 4-Tier Digital Twin Schematic */}
+          <div
+            className="flex-1 grid gap-3 min-h-0"
+            style={{ gridTemplateColumns: '1.05fr 1.35fr 0.95fr' }}
+          >
+            {/* Left Column: 4-Tier Digital Twin Tower Schematic */}
             <div className="min-h-0 overflow-hidden">
               <DigitalTwin />
             </div>
 
-            {/* Center: Realtime Telemetry & Salinity Chart */}
+            {/* Center Column: Salinity Telemetry & Thermal Kinetics Chart */}
             <div className="min-h-0 overflow-hidden">
               <TelemetryChart />
             </div>
 
-            {/* Right: Actuator Controls & Circular Economy ROI */}
-            <div className="min-h-0 overflow-y-auto" style={{ scrollbarWidth: 'thin' }}>
+            {/* Right Column: Actuator Controls & B2B Circular Economy ROI */}
+            <div className="min-h-0 overflow-y-auto pr-0.5" style={{ scrollbarWidth: 'thin' }}>
               <ControlPanel />
             </div>
           </div>
         ) : (
           /* View 2: AI Intelligence Suite (Predictor | Diagnostics | Co-Pilot) */
-          <div className="flex-1 grid gap-2.5 min-h-0" style={{ gridTemplateColumns: '1.2fr 0.95fr 1fr' }}>
-            {/* Feature 1: Time-to-Target & Pass Predictor */}
+          <div
+            className="flex-1 grid gap-3 min-h-0"
+            style={{ gridTemplateColumns: '1.1fr 1fr 1.15fr' }}
+          >
+            {/* Feature 1: Time-to-Target & Pass Predictor (OLS Kinetics) */}
             <div className="min-h-0 overflow-hidden">
               <PredictiveAnalytics />
             </div>
@@ -59,18 +65,26 @@ function MainApp() {
               <ElectrodeDiagnostics />
             </div>
 
-            {/* Feature 3: Interactive Hylex AI Co-Pilot */}
+            {/* Feature 3: Interactive Hylex AI Co-Pilot with Local Ollama */}
             <div className="min-h-0 overflow-hidden">
               <HylexCopilot />
             </div>
           </div>
         )}
 
-        {/* Slide-over Co-Pilot Drawer (Accessible when browsing Digital Twin) */}
+        {/* Slide-over Co-Pilot Drawer (Accessible when exploring Digital Twin) */}
         {isCopilotOpen && activeView === 'dashboard' && (
-          <div className="absolute top-2.5 right-2.5 bottom-2.5 w-[460px] z-40 shadow-2xl animate-in fade-in slide-in-from-right duration-200">
-            <HylexCopilot onClose={() => setIsCopilotOpen(false)} />
-          </div>
+          <>
+            {/* Subtle backdrop overlay */}
+            <div
+              className="absolute inset-0 z-40 bg-slate-950/40 backdrop-blur-[2px] transition-opacity animate-in fade-in duration-200"
+              onClick={() => setIsCopilotOpen(false)}
+            />
+            {/* Slide-over drawer */}
+            <aside className="absolute top-3 right-3 bottom-3 w-[470px] max-w-[calc(100vw-28px)] z-50 shadow-2xl animate-in fade-in slide-in-from-right duration-250 flex flex-col">
+              <HylexCopilot onClose={() => setIsCopilotOpen(false)} />
+            </aside>
+          </>
         )}
       </main>
     </div>

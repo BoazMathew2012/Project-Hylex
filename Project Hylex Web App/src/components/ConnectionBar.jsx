@@ -37,217 +37,231 @@ export default function ConnectionBar({
     if (isLive) {
       if (state.wsStatus === 'connected') {
         return (
-          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-xs font-mono">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 pulse-ring inline-block" />
-            ONLINE {state.latencyMs}ms
+          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
+            ESP32 LIVE · {state.latencyMs ?? 12}ms
           </span>
         );
       }
       if (state.wsStatus === 'connecting') {
         return (
-          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-mono blink">
-            <Activity size={10} /> CONNECTING…
+          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono">
+            <Activity size={12} className="animate-spin text-amber-400" /> Connecting…
           </span>
         );
       }
       return (
-        <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-red-500/15 border border-red-500/30 text-red-400 text-xs font-mono">
-          <WifiOff size={10} /> OFFLINE
+        <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-500/10 border border-red-500/30 text-red-300 text-xs font-mono">
+          <WifiOff size={12} className="text-red-400" /> ESP32 Offline
         </span>
       );
     }
     return (
-      <span className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-cyan-500/15 border border-cyan-500/30 text-cyan-400 text-xs font-mono">
-        <Radio size={10} /> SIMULATED
+      <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-cyan-500/10 border border-cyan-500/30 text-cyan-300 text-xs font-mono" title="Telemetry is synthesized for judging demonstration">
+        <Radio size={12} className="text-cyan-400" /> SIMULATED TELEMETRY
       </span>
     );
   };
 
   return (
     <>
-      <header className="flex items-center gap-2.5 px-3 py-1.5 bg-slate-900/90 border-b border-slate-800 backdrop-blur-sm flex-shrink-0">
-        {/* Brand Logo */}
-        <div className="flex items-center gap-2 mr-1">
-          <div className="relative">
-            <Shield size={20} className="text-cyan-400" />
-            <Zap size={8} className="text-amber-400 absolute bottom-0 right-0" />
-          </div>
-          <div>
-            <div className="text-xs font-bold text-slate-100 leading-none tracking-widest">HYLEX</div>
-            <div className="text-[9px] text-slate-500 leading-none tracking-wider">SDG-6 COMMAND</div>
-          </div>
-        </div>
-
-        <div className="w-px h-7 bg-slate-800" />
-
-        {/* Navigation View Switcher (Dashboard vs AI Intelligence Suite) */}
-        <div className="flex items-center bg-slate-950/80 rounded-lg p-0.5 border border-slate-800">
-          <button
-            onClick={() => setActiveView('dashboard')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono font-medium transition-all ${
-              activeView === 'dashboard'
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 border border-transparent'
-            }`}
-          >
-            <Sliders size={12} className={activeView === 'dashboard' ? 'text-cyan-400' : 'text-slate-500'} />
-            <span>DIGITAL TWIN</span>
-          </button>
-
-          <button
-            onClick={() => setActiveView('ai')}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono font-medium transition-all ${
-              activeView === 'ai'
-                ? 'bg-purple-500/25 text-purple-200 border border-purple-500/50 shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 border border-transparent'
-            }`}
-          >
-            <BrainCircuit size={12} className={activeView === 'ai' ? 'text-purple-400' : 'text-slate-500'} />
-            <span>AI INTELLIGENCE SUITE</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse ml-0.5" />
-          </button>
-        </div>
-
-        <div className="w-px h-7 bg-slate-800" />
-
-        {/* Telemetry Hardware Mode Toggle */}
-        <div className="flex items-center bg-slate-800/60 rounded p-0.5 gap-0.5">
-          <button
-            onClick={() => dispatch({ type: 'SET_MODE', payload: 'simulation' })}
-            className={`px-2 py-1 rounded text-xs font-medium transition-all ${
-              isSim
-                ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/40'
-                : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            ◉ SIM MODE
-          </button>
-          <button
-            onClick={() => dispatch({ type: 'SET_MODE', payload: 'live' })}
-            className={`px-2 py-1 rounded text-xs font-medium transition-all ${
-              isLive
-                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            ⚡ LIVE ESP32
-          </button>
-        </div>
-
-        {/* ESP32 URL input (live mode) */}
-        {isLive && (
-          <div className="flex items-center gap-1.5">
-            <div className="flex items-center gap-1 bg-slate-800 rounded border border-slate-700 px-2 py-1">
-              <Wifi size={10} className="text-slate-500" />
-              <input
-                value={localUrl}
-                onChange={e => { setLocalUrl(e.target.value); dispatch({ type: 'SET_WS_URL', payload: e.target.value }); }}
-                className="bg-transparent text-xs font-mono text-slate-300 w-40 outline-none"
-                placeholder="ws://192.168.4.1:81"
-              />
+      <header className="flex items-center justify-between px-4 py-2 bg-slate-900/95 border-b border-slate-800 backdrop-blur-md flex-shrink-0 z-30">
+        {/* Left: Brand Identity & View Switcher */}
+        <div className="flex items-center gap-3">
+          {/* Brand Logo */}
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-cyan-400">
+              <Shield size={16} />
             </div>
-            {state.wsStatus === 'connected' ? (
-              <button
-                onClick={disconnect}
-                className="px-2 py-1 rounded text-xs bg-red-500/15 border border-red-500/30 text-red-400 hover:bg-red-500/25 transition-all"
-              >
-                DISCONNECT
-              </button>
-            ) : (
-              <button
-                onClick={connect}
-                className="px-2 py-1 rounded text-xs bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/25 transition-all"
-              >
-                CONNECT
-              </button>
-            )}
+            <div>
+              <div className="text-sm font-bold font-mono text-white tracking-wider leading-none">
+                HYLEX
+              </div>
+              <div className="text-[10px] text-slate-400 font-sans leading-none mt-0.5">
+                Desalination Valorization · UN SDG 6
+              </div>
+            </div>
           </div>
-        )}
 
-        {statusBadge()}
+          <div className="w-px h-5 bg-slate-800 hidden sm:block" />
 
-        <div className="w-px h-7 bg-slate-800" />
-
-        {/* Judge Demo Bar — Simulation only */}
-        {isSim && (
-          <div className="flex items-center gap-1.5">
-            <span className="text-[9px] text-slate-500 uppercase tracking-widest font-mono hidden xl:inline">Demo:</span>
-
+          {/* Navigation View Switcher (Segmented Control) */}
+          <div className="flex items-center bg-slate-950 rounded-lg p-0.5 border border-slate-800">
             <button
-              onClick={() => dispatch({ type: 'SIM_INJECT_RAW' })}
-              className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 hover:border-red-500/50 transition-all"
-              title="Inject Raw Brine (>500 ppm triggers Recirculation to Tank A)"
-            >
-              <FlaskConical size={11} />
-              <span>Raw (780 ppm)</span>
-            </button>
-
-            <button
-              onClick={() => dispatch({ type: 'SIM_VORTEX_CLEAN' })}
-              className="flex items-center gap-1 px-2 py-1 rounded text-xs font-medium bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/50 transition-all"
-              title="Vortex Clarified (<=500 ppm routes Clean to Tank B)"
-            >
-              <Zap size={11} />
-              <span>Clarified (380 ppm)</span>
-            </button>
-
-            <button
-              onClick={handleTurretIndex}
-              disabled={turretCooldown}
-              className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all ${
-                turretCooldown
-                  ? 'bg-slate-800/50 border border-slate-700 text-slate-600 cursor-not-allowed'
-                  : 'bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 hover:border-amber-500/50'
+              type="button"
+              onClick={() => setActiveView('dashboard')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-sans font-medium transition-colors ${
+                activeView === 'dashboard'
+                  ? 'bg-slate-800 text-cyan-300 shadow-sm border border-cyan-500/30'
+                  : 'text-slate-400 hover:text-slate-200'
               }`}
-              title="Pinch cutoff chute for 3s and rotate 28BYJ-48 stepper 120°"
             >
-              <RotateCcw size={11} className={turretCooldown ? 'animate-spin' : ''} />
-              <span>Turret (120°)</span>
+              <Sliders size={13} className={activeView === 'dashboard' ? 'text-cyan-400' : 'text-slate-500'} />
+              <span>Digital Twin</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveView('ai')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-sans font-medium transition-colors ${
+                activeView === 'ai'
+                  ? 'bg-slate-800 text-purple-300 shadow-sm border border-purple-500/30'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <BrainCircuit size={13} className={activeView === 'ai' ? 'text-purple-400' : 'text-slate-500'} />
+              <span>AI Intelligence Suite</span>
             </button>
           </div>
-        )}
+        </div>
 
-        {/* Right side modals & AI assistant toggle */}
-        <div className="ml-auto flex items-center gap-2">
+        {/* Center: Hardware Mode & Live Status / Sim Presets */}
+        <div className="hidden lg:flex items-center gap-2.5">
+          {/* Mode Switcher */}
+          <div className="flex items-center bg-slate-950 rounded-lg p-0.5 border border-slate-800">
+            <button
+              type="button"
+              onClick={() => dispatch({ type: 'SET_MODE', payload: 'simulation' })}
+              className={`px-2.5 py-1 rounded text-xs font-sans font-medium transition-colors ${
+                isSim
+                  ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                  : 'text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              Simulation
+            </button>
+            <button
+              type="button"
+              onClick={() => dispatch({ type: 'SET_MODE', payload: 'live' })}
+              className={`px-2.5 py-1 rounded text-xs font-sans font-medium transition-colors ${
+                isLive
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                  : 'text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              ESP32 Live
+            </button>
+          </div>
+
+          {/* Status Badge */}
+          {statusBadge()}
+
+          {/* ESP32 URL input when in live mode */}
+          {isLive && (
+            <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 bg-slate-950 rounded-lg border border-slate-800 px-2.5 py-1">
+                <Wifi size={11} className="text-slate-500" />
+                <input
+                  type="text"
+                  value={localUrl}
+                  onChange={(e) => {
+                    setLocalUrl(e.target.value);
+                    dispatch({ type: 'SET_WS_URL', payload: e.target.value });
+                  }}
+                  className="bg-transparent text-xs font-mono text-slate-300 w-36 outline-none"
+                  placeholder="ws://192.168.4.1:81"
+                />
+              </div>
+              {state.wsStatus === 'connected' ? (
+                <button
+                  type="button"
+                  onClick={disconnect}
+                  className="px-2.5 py-1 rounded-lg text-xs font-sans bg-red-500/10 border border-red-500/30 text-red-300 hover:bg-red-500/20 transition-colors"
+                >
+                  Disconnect
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={connect}
+                  className="px-2.5 py-1 rounded-lg text-xs font-sans bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 transition-colors"
+                >
+                  Connect
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Judge Demo Presets — Simulation mode */}
+          {isSim && (
+            <div className="flex items-center gap-1.5 pl-2 border-l border-slate-800">
+              <button
+                type="button"
+                onClick={() => dispatch({ type: 'SIM_INJECT_RAW' })}
+                className="flex items-center gap-1 px-2 py-1 rounded text-xs font-sans bg-red-500/10 border border-red-500/25 text-red-300 hover:bg-red-500/20 transition-colors"
+                title="Inject Raw Brine (780 ppm triggers Recirculation to Tank A)"
+              >
+                <FlaskConical size={12} className="text-red-400" />
+                <span>Raw (780 ppm)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => dispatch({ type: 'SIM_VORTEX_CLEAN' })}
+                className="flex items-center gap-1 px-2 py-1 rounded text-xs font-sans bg-emerald-500/10 border border-emerald-500/25 text-emerald-300 hover:bg-emerald-500/20 transition-colors"
+                title="Vortex Clarified (380 ppm routes Clean to Tank B)"
+              >
+                <Zap size={12} className="text-emerald-400" />
+                <span>Clarified (380 ppm)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleTurretIndex}
+                disabled={turretCooldown}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-sans transition-colors ${
+                  turretCooldown
+                    ? 'bg-slate-800/40 border border-slate-800 text-slate-600 cursor-not-allowed'
+                    : 'bg-amber-500/10 border border-amber-500/25 text-amber-300 hover:bg-amber-500/20'
+                }`}
+                title="Pinch cutoff chute for 3s and rotate 28BYJ-48 stepper 120°"
+              >
+                <RotateCcw size={12} className={turretCooldown ? 'animate-spin text-amber-400' : 'text-amber-400'} />
+                <span>Turret (120°)</span>
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Right side: Co-Pilot toggle & Modals */}
+        <div className="flex items-center gap-2">
           {/* Quick AI Co-Pilot Slide-over Trigger */}
           <button
+            type="button"
             onClick={() => setIsCopilotOpen(!isCopilotOpen)}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-mono font-medium transition-all shadow-sm ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-sans font-medium transition-colors shadow-sm ${
               isCopilotOpen
-                ? 'bg-cyan-500/25 border border-cyan-500/50 text-cyan-200'
+                ? 'bg-cyan-500/20 border border-cyan-500/50 text-cyan-200'
                 : 'bg-slate-800 hover:bg-slate-700 border border-slate-700 text-cyan-300'
             }`}
-            title="Toggle Quick Hylex AI Co-Pilot Drawer"
+            title="Toggle AI Co-Pilot Panel"
           >
-            <Bot size={13} className="text-cyan-400" />
-            <span>CO-PILOT</span>
-            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block animate-pulse" />
+            <Bot size={14} className="text-cyan-400" />
+            <span>Co-Pilot</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 inline-block" />
           </button>
 
           {/* Arduino TFT HMI Modal Trigger */}
           <button
+            type="button"
             onClick={() => setIsHmiOpen(true)}
-            className="flex items-center gap-1.5 px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-mono text-cyan-300 transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs font-sans text-slate-200 transition-colors shadow-sm"
+            title="Open Arduino 3.5-inch TFT LCD Touchscreen HMI"
           >
-            <Tv size={12} className="text-cyan-400" />
-            <span>HMI</span>
+            <Tv size={13} className="text-cyan-400" />
+            <span>HMI Screen</span>
           </button>
 
-          {/* Project Dossier / Synopsis Modal Trigger */}
+          {/* Project Dossier Modal Trigger */}
           <button
+            type="button"
             onClick={() => setIsSynopsisOpen(true)}
-            className="flex items-center gap-1.5 px-2 py-1 rounded bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-xs font-mono text-emerald-300 transition-all shadow-sm"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-xs font-sans text-emerald-300 transition-colors shadow-sm"
+            title="View Engineering Dossier & System Specs"
           >
-            <FileText size={12} className="text-emerald-400" />
-            <span>DOSSIER</span>
+            <FileText size={13} className="text-emerald-400" />
+            <span>Dossier</span>
           </button>
-
-          <div className="w-px h-7 bg-slate-800 hidden sm:block" />
-
-          <div className="text-right hidden sm:block">
-            <div className="text-[9px] text-slate-400 font-mono font-bold leading-tight">PROJECT HYLEX</div>
-            <div className="text-[8px] text-slate-500 font-mono leading-tight">GEMS 2026 · UN SDG 6</div>
-          </div>
         </div>
       </header>
 
