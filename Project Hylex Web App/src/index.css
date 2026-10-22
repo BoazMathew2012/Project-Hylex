@@ -1,0 +1,70 @@
+@import "tailwindcss";
+
+@theme {
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+
+  --color-cyan-400: #22d3ee;
+  --color-cyan-500: #06b6d4;
+  --color-emerald-400: #34d399;
+  --color-emerald-500: #10b981;
+  --color-amber-400: #fbbf24;
+  --color-amber-500: #f59e0b;
+  --color-red-400: #f87171;
+  --color-slate-950: #020617;
+  --color-slate-900: #0f172a;
+  --color-slate-800: #1e293b;
+  --color-slate-700: #334155;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: #020617; }
+::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+/* Neon glow helpers */
+.glow-cyan  { text-shadow: 0 0 8px #22d3ee88; }
+.glow-emerald { text-shadow: 0 0 8px #34d39988; }
+.glow-amber  { text-shadow: 0 0 8px #fbbf2488; }
+.glow-red    { text-shadow: 0 0 8px #f8717188; }
+
+.border-glow-cyan    { box-shadow: 0 0 0 1px #22d3ee22, inset 0 0 20px #22d3ee08; }
+.border-glow-emerald { box-shadow: 0 0 0 1px #34d39922, inset 0 0 20px #34d39908; }
+.border-glow-amber   { box-shadow: 0 0 0 1px #fbbf2422, inset 0 0 20px #fbbf2408; }
+.border-glow-red     { box-shadow: 0 0 0 1px #f8717122, inset 0 0 20px #f8717108; }
+
+/* Animated flow line */
+@keyframes flow-dash {
+  from { stroke-dashoffset: 20; }
+  to   { stroke-dashoffset: 0; }
+}
+.flow-line { animation: flow-dash 0.8s linear infinite; }
+
+@keyframes spin-slow { to { transform: rotate(360deg); } }
+.spin-slow { animation: spin-slow 4s linear infinite; }
+
+@keyframes particle-fall {
+  0%   { transform: translateY(-100%); opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateY(100%); opacity: 0; }
+}
+
+@keyframes pulse-ring {
+  0%   { transform: scale(1);   opacity: 1; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+.pulse-ring { animation: pulse-ring 1.4s ease-out infinite; }
+
+@keyframes blink { 50% { opacity: 0.3; } }
+.blink { animation: blink 1s step-end infinite; }
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  background: #020617;
+  color: #e2e8f0;
+  font-family: 'Inter', sans-serif;
+  overflow: hidden;
+}
