@@ -1,17 +1,50 @@
 import { createContext, useContext, useReducer, useEffect, useRef, useCallback } from 'react';
-import { INITIAL_STATE } from './initialState';
+import { INITIAL_STATE, ZERO_TELEMETRY, SIMULATION_TELEMETRY } from './initialState';
 
 const HylexContext = createContext(null);
 const HylexDispatch = createContext(null);
 
 function reducer(state, action) {
   switch (action.type) {
-    case 'SET_MODE':
-      return { ...state, mode: action.payload };
+    case 'SET_MODE': {
+      const mode = action.payload;
+      if (mode === 'live') {
+        // If ESP32 is not connected, change all values to 0 instead of freezing
+        if (state.wsStatus !== 'connected') {
+          return {
+            ...state,
+            mode: 'live',
+            ...ZERO_TELEMETRY,
+          };
+        }
+        return { ...state, mode: 'live' };
+      } else {
+        // Switching back to simulation mode
+        // Restore default baseline simulation telemetry if values were at 0
+        const shouldRestore = state.tds === 0 && state.tempC === 0;
+        return {
+          ...state,
+          mode: 'simulation',
+          ...(shouldRestore ? SIMULATION_TELEMETRY : {}),
+          chartHistory: shouldRestore ? [] : state.chartHistory,
+        };
+      }
+    }
     case 'SET_WS_URL':
       return { ...state, wsUrl: action.payload };
-    case 'SET_WS_STATUS':
-      return { ...state, wsStatus: action.payload, latencyMs: action.latencyMs ?? state.latencyMs };
+    case 'SET_WS_STATUS': {
+      const wsStatus = action.payload;
+      const isLive = state.mode === 'live';
+      // If the ESP32 is not connected in live mode, change all values to 0
+      if (isLive && wsStatus !== 'connected') {
+        return {
+          ...state,
+          wsStatus,
+          ...ZERO_TELEMETRY,
+        };
+      }
+      return { ...state, wsStatus, latencyMs: action.latencyMs ?? state.latencyMs };
+    }
     case 'SENSOR_UPDATE': {
       const data = action.payload;
       const tds = data.tds ?? state.tds;
@@ -53,9 +86,9 @@ function reducer(state, action) {
       };
     }
     case 'SIM_INJECT_RAW':
-      return reducer(state, { type: 'SENSOR_UPDATE', payload: { tds: 780, tempC: state.tempC } });
+      return reducer(state, { type: 'SENSOR_UPDATE', payload: { tds: 780, tempC: state.tempC || 23.4 } });
     case 'SIM_VORTEX_CLEAN':
-      return reducer(state, { type: 'SENSOR_UPDATE', payload: { tds: 380, tempC: state.tempC } });
+      return reducer(state, { type: 'SENSOR_UPDATE', payload: { tds: 380, tempC: state.tempC || 23.4 } });
     case 'SIM_TURRET_INDEX': {
       const next = (state.carouselSlot + 1) % 3;
       const psat = [...state.podSaturation];
@@ -71,14 +104,19 @@ function reducer(state, action) {
     case 'SERVO2_RESET':
       return { ...state, servo2: 0 };
     case 'SET_SERVO1':
+      if (state.mode === 'live' && state.wsStatus !== 'connected') return state;
       return { ...state, servo1: action.payload };
     case 'SET_SERVO2':
+      if (state.mode === 'live' && state.wsStatus !== 'connected') return state;
       return { ...state, servo2: action.payload };
     case 'SET_SERVO3':
+      if (state.mode === 'live' && state.wsStatus !== 'connected') return state;
       return { ...state, servo3: action.payload, routeClean: action.payload < 45 };
     case 'SET_SERVO4':
+      if (state.mode === 'live' && state.wsStatus !== 'connected') return state;
       return { ...state, servo4: action.payload };
     case 'TOGGLE_RELAY':
+      if (state.mode === 'live' && state.wsStatus !== 'connected') return state;
       return { ...state, [`relay${action.payload}`]: !state[`relay${action.payload}`] };
     case 'SET_CONTROL_MODE':
       return { ...state, controlMode: action.payload };
@@ -90,10 +128,11 @@ function reducer(state, action) {
       return { ...state, podSaturation: psat };
     }
     case 'TICK_SIMULATION': {
+      if (state.mode !== 'simulation') return state;
       const drift = (Math.random() - 0.5) * 8;
-      const newTds = Math.max(50, Math.min(950, state.tds + drift));
+      const newTds = Math.max(50, Math.min(950, (state.tds || 380) + drift));
       const tempDrift = (Math.random() - 0.5) * 0.3;
-      const newTemp = Math.max(18, Math.min(35, state.tempC + tempDrift));
+      const newTemp = Math.max(18, Math.min(35, (state.tempC || 23.4) + tempDrift));
       return reducer(state, { type: 'SENSOR_UPDATE', payload: { tds: Math.round(newTds * 10) / 10, tempC: Math.round(newTemp * 10) / 10 } });
     }
     default:

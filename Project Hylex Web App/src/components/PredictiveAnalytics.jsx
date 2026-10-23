@@ -279,7 +279,7 @@ export default function PredictiveAnalytics() {
             <span className="text-xs font-mono text-slate-500">ppm</span>
           </div>
           <div className="text-[10px] font-sans text-slate-400">
-            Compensated: <span className="text-slate-200 font-mono">{(state.tds / (1 + 0.02 * (state.tempC - 25))).toFixed(1)} ppm</span>
+            Compensated: <span className="text-slate-200 font-mono">{state.tds > 0 && (1 + 0.02 * (state.tempC - 25)) > 0 ? (state.tds / (1 + 0.02 * (state.tempC - 25))).toFixed(1) : '0.0'} ppm</span>
           </div>
         </div>
 

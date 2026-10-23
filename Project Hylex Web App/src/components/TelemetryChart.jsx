@@ -13,7 +13,7 @@ const PAD = { left: 48, right: 20, top: 20, bottom: 32 };
 const cW  = W - PAD.left - PAD.right;
 const cH  = H - PAD.top  - PAD.bottom;
 
-function RealtimeChart({ history, showIndustrial }) {
+function RealtimeChart({ history, showIndustrial, isLiveOffline }) {
   const maxY     = showIndustrial ? INDUSTRIAL_RAW * 1.05 : 1000;
   const threshold = showIndustrial ? IND_TARGET : THRESHOLD;
 
@@ -80,6 +80,20 @@ function RealtimeChart({ history, showIndustrial }) {
       <text x={W - PAD.right - 4} y={thresholdY - 5} textAnchor="end" fontSize="8.5" fill={isSafe ? '#34d399' : '#f87171'} fontFamily="JetBrains Mono" fontWeight="600">
         {showIndustrial ? '38,500 ppm — Hylex Target' : '500 ppm — Dubai Potable Standard'}
       </text>
+
+      {/* Empty / offline status notice */}
+      {(!history || history.length === 0) && (
+        <text
+          x={PAD.left + cW / 2}
+          y={PAD.top + cH / 2}
+          textAnchor="middle"
+          fontSize="9.5"
+          fill="#64748b"
+          fontFamily="JetBrains Mono"
+        >
+          {isLiveOffline ? 'ESP32 Offline · All Numerics 0 · Click Connect to stream' : 'Awaiting telemetry packets…'}
+        </text>
+      )}
 
       {/* Area + line */}
       {areaPath && <path d={areaPath} fill="url(#area-grad)" />}
@@ -148,12 +162,14 @@ function IndustrialTrajectory({ currentTds }) {
 export default function TelemetryChart() {
   const { state } = useHylex();
   const [showIndustrial, setShowIndustrial] = useState(false);
-  const { chartHistory, tds, tempC } = state;
+  const { chartHistory, tds, tempC, mode, wsStatus } = state;
+  const isLiveOffline = mode === 'live' && wsStatus !== 'connected';
 
-  const minTds = chartHistory.length ? Math.min(...chartHistory.map(p => p.tds)).toFixed(0) : '--';
-  const maxTds = chartHistory.length ? Math.max(...chartHistory.map(p => p.tds)).toFixed(0) : '--';
+  const minTds = chartHistory.length ? Math.min(...chartHistory.map(p => p.tds)).toFixed(0) : (tds === 0 ? '0' : '--');
+  const maxTds = chartHistory.length ? Math.max(...chartHistory.map(p => p.tds)).toFixed(0) : (tds === 0 ? '0' : '--');
   const avgTds = chartHistory.length
-    ? (chartHistory.reduce((a, p) => a + p.tds, 0) / chartHistory.length).toFixed(0) : '--';
+    ? (chartHistory.reduce((a, p) => a + p.tds, 0) / chartHistory.length).toFixed(0) : (tds === 0 ? '0' : '--');
+  const compEC25 = tds > 0 && (1 + 0.02 * (tempC - 25)) > 0 ? (tds / (1 + 0.02 * (tempC - 25))).toFixed(0) : '0';
 
   return (
     <div className="rounded-xl border border-slate-800 bg-slate-900/85 backdrop-blur-sm p-3.5 flex flex-col justify-between h-full shadow-sm">
@@ -205,7 +221,7 @@ export default function TelemetryChart() {
 
       {/* Chart Canvas */}
       <div className="flex-1 min-h-0 flex flex-col my-1">
-        <RealtimeChart history={chartHistory} showIndustrial={showIndustrial} />
+        <RealtimeChart history={chartHistory} showIndustrial={showIndustrial} isLiveOffline={isLiveOffline} />
       </div>
 
       {/* Bottom Summary Bar or Industrial Stages */}
@@ -218,7 +234,7 @@ export default function TelemetryChart() {
             { label: 'Maximum TDS', val: `${maxTds} ppm`, color: 'text-red-400' },
             { label: 'Average TDS', val: `${avgTds} ppm`, color: 'text-cyan-400' },
             { label: 'Fluid Temp', val: `${tempC.toFixed(1)}°C`, color: 'text-amber-400' },
-            { label: 'Compensated EC₂₅', val: `${(tds / (1 + 0.02 * (tempC - 25))).toFixed(0)} ppm`, color: 'text-purple-400' },
+            { label: 'Compensated EC₂₅', val: `${compEC25} ppm`, color: 'text-purple-400' },
           ].map(s => (
             <div key={s.label} className="bg-slate-950/60 border border-slate-800/80 rounded-lg px-2.5 py-1.5 text-center">
               <div className="text-[10px] text-slate-400 font-sans font-medium truncate">{s.label}</div>

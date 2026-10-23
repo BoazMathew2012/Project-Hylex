@@ -19,10 +19,11 @@ export default function HmiModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  const { tds, tempC, carouselSlot, podSaturation, relay2 } = state;
-
-  const EC25 = (tds / (1 + 0.02 * (tempC - 25))).toFixed(1);
-  const isSafe = tds <= 500;
+  const { tds, tempC, carouselSlot, podSaturation, relay2, mode, wsStatus } = state;
+  const isOffline = mode === 'live' && wsStatus !== 'connected';
+  const divisor = 1 + 0.02 * (tempC - 25);
+  const EC25 = tds > 0 && divisor > 0 ? (tds / divisor).toFixed(1) : '0.0';
+  const isSafe = !isOffline && tds <= 500 && tds > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md">
@@ -61,9 +62,9 @@ export default function HmiModal({ isOpen, onClose }) {
             {/* PCB silk screen markings */}
             <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mb-1.5 px-1">
               <span>HYLEX HMI v1.2 · ARDUINO SHIELD</span>
-              <span className="flex items-center gap-1.5 text-emerald-400">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-                UART BRIDGE: 9600 BAUD (A5)
+              <span className={`flex items-center gap-1.5 ${isOffline ? 'text-red-400' : 'text-emerald-400'}`}>
+                <span className={`w-1.5 h-1.5 rounded-full inline-block ${isOffline ? 'bg-red-400' : 'bg-emerald-400'}`} />
+                {isOffline ? 'UART BRIDGE: DISCONNECTED' : 'UART BRIDGE: 9600 BAUD (A5)'}
               </span>
             </div>
 
@@ -77,7 +78,9 @@ export default function HmiModal({ isOpen, onClose }) {
               <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                 <div className="flex items-center gap-2">
                   <span className="text-cyan-400 font-bold text-xs">HYLEX TOWER HMI</span>
-                  <span className="text-[10px] text-slate-500">| ESP32 LINK OK</span>
+                  <span className={`text-[10px] ${isOffline ? 'text-red-400' : 'text-slate-500'}`}>
+                    | {isOffline ? 'ESP32 OFFLINE' : 'ESP32 LINK OK'}
+                  </span>
                 </div>
                 <div className="text-[10px] text-slate-400">
                   {currentTime}
@@ -90,8 +93,8 @@ export default function HmiModal({ isOpen, onClose }) {
                 <div className="p-2.5 rounded bg-slate-900/90 border border-slate-800 flex flex-col justify-between">
                   <div className="flex justify-between items-center text-[10px] text-slate-400">
                     <span>GRAVITY TDS</span>
-                    <span className={isSafe ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
-                      {isSafe ? 'PASS' : 'RECIRC'}
+                    <span className={isOffline ? 'text-slate-500 font-bold' : isSafe ? 'text-emerald-400 font-bold' : 'text-amber-400 font-bold'}>
+                      {isOffline ? 'OFFLINE' : isSafe ? 'PASS' : 'RECIRC'}
                     </span>
                   </div>
                   <div className="my-1">
@@ -101,8 +104,8 @@ export default function HmiModal({ isOpen, onClose }) {
                   {/* Progress bar with 500ppm tick */}
                   <div className="relative h-2 bg-slate-950 rounded overflow-hidden">
                     <div
-                      className={`h-full transition-all duration-300 ${isSafe ? 'bg-emerald-400' : 'bg-amber-400'}`}
-                      style={{ width: `${Math.min(100, (tds / 1000) * 100)}%` }}
+                      className={`h-full transition-all duration-300 ${isOffline ? 'bg-slate-700' : isSafe ? 'bg-emerald-400' : 'bg-amber-400'}`}
+                      style={{ width: `${isOffline ? 0 : Math.min(100, (tds / 1000) * 100)}%` }}
                     />
                     <div className="absolute top-0 bottom-0 w-0.5 bg-yellow-400" style={{ left: '50%' }} />
                   </div>
@@ -134,16 +137,24 @@ export default function HmiModal({ isOpen, onClose }) {
 
               {/* Status Banner */}
               <div className={`p-2.5 rounded border flex items-center justify-between text-xs font-bold transition-colors ${
-                isSafe
+                isOffline
+                  ? 'bg-slate-900 border-slate-800 text-slate-400'
+                  : isSafe
                   ? 'bg-emerald-500/15 border-emerald-500/40 text-emerald-300'
                   : 'bg-amber-500/15 border-amber-500/40 text-amber-300'
               }`}>
                 <div className="flex items-center gap-2">
-                  <span className={`w-2 h-2 rounded-full ${isSafe ? 'bg-emerald-400' : 'bg-amber-400'}`} />
-                  <span>{isSafe ? 'ROUTING: TANK B (CLEAN STORE)' : 'ROUTING: TANK A (RECIRCULATE)'}</span>
+                  <span className={`w-2 h-2 rounded-full ${isOffline ? 'bg-slate-600' : isSafe ? 'bg-emerald-400' : 'bg-amber-400'}`} />
+                  <span>
+                    {isOffline
+                      ? 'ROUTING: STANDBY (ESP32 OFFLINE)'
+                      : isSafe
+                      ? 'ROUTING: TANK B (CLEAN STORE)'
+                      : 'ROUTING: TANK A (RECIRCULATE)'}
+                  </span>
                 </div>
                 <span className="text-[10px] font-normal text-slate-300">
-                  {isSafe ? 'S3: 0° OPEN' : 'S1: 55° PINCH'}
+                  {isOffline ? 'S3: 0° STANDBY' : isSafe ? 'S3: 0° OPEN' : 'S1: 55° PINCH'}
                 </span>
               </div>
 

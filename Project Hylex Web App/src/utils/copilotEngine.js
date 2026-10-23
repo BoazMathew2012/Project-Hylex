@@ -33,7 +33,7 @@ export function buildTelemetrySnapshot(state, prediction, diagnostics) {
     sensors: {
       tdsPpm: state.tds,
       tempC: state.tempC,
-      ec25CompensatedPpm: Number((state.tds / (1 + 0.02 * (state.tempC - 25))).toFixed(1)),
+      ec25CompensatedPpm: state.tds > 0 && (1 + 0.02 * (state.tempC - 25)) > 0 ? Number((state.tds / (1 + 0.02 * (state.tempC - 25))).toFixed(1)) : 0,
       industrialEquivalentPpm: Math.round(state.tds * 82.35),
     },
     controls: {

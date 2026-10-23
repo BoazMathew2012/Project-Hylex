@@ -80,7 +80,8 @@ function FlowLine({ points, active, color }) {
 
 export default function DigitalTwin() {
   const { state } = useHylex();
-  const { servo1, servo2, servo3, servo4, carouselAngle, podSaturation, carouselSlot, routeClean, relay2, relay3 } = state;
+  const { servo1, servo2, servo3, servo4, carouselAngle, podSaturation, carouselSlot, routeClean, relay1, relay2, relay3, mode, wsStatus } = state;
+  const isLiveOffline = mode === 'live' && wsStatus !== 'connected';
 
   const W = 320;
   const H = 600;
@@ -171,7 +172,7 @@ export default function DigitalTwin() {
         ))}
 
         {/* Animated swirling particles */}
-        {[0, 1, 2, 3, 4].map(i => (
+        {relay1 && [0, 1, 2, 3, 4].map(i => (
           <circle key={i} r="2.5" fill="#22d3ee" opacity="0.85">
             <animateMotion dur={`${1.4 + i * 0.3}s`} begin={`${i * 0.28}s`} repeatCount="indefinite"
               path={Array.from({ length: 20 }, (_, k) => {
@@ -201,9 +202,9 @@ export default function DigitalTwin() {
         <rect x="52" y="125" width="216" height="106" rx="7" fill="#091322" stroke="#1e293b" strokeWidth="1.2" />
 
         {/* Gravity TDS sensor readout pill */}
-        <rect x="105" y="130" width="110" height="19" rx="4" fill="#0f172a" stroke="#22d3ee" strokeWidth="0.9" />
-        <text x={MX} y="143" textAnchor="middle" fontSize="8.5" fill="#22d3ee" fontFamily="JetBrains Mono" fontWeight="600">
-          TDS {state.tds.toFixed(0)} ppm · {state.tempC.toFixed(1)}°C
+        <rect x="95" y="130" width="130" height="19" rx="4" fill="#0f172a" stroke={isLiveOffline ? '#475569' : '#22d3ee'} strokeWidth="0.9" />
+        <text x={MX} y="143" textAnchor="middle" fontSize="8" fill={isLiveOffline ? '#94a3b8' : '#22d3ee'} fontFamily="JetBrains Mono" fontWeight="600">
+          {isLiveOffline ? 'TDS 0 ppm · 0.0°C (OFFLINE)' : `TDS ${state.tds.toFixed(0)} ppm · ${state.tempC.toFixed(1)}°C`}
         </text>
 
         {/* 4 Servos: Evenly spaced (S1, S2, S3, S4) */}
@@ -266,7 +267,7 @@ export default function DigitalTwin() {
 
         {/* Active Pod status */}
         <text x={carCX} y="405" textAnchor="middle" fontSize="7" fill="#cbd5e1" fontFamily="JetBrains Mono">
-          Active: Pod #{carouselSlot + 1} (Graphite +12V / SS304 -12V)
+          Active: Pod #{carouselSlot + 1} {relay2 ? '(Graphite +12V / SS304 -12V)' : '(Circuits Standby)'}
         </text>
 
         {/* Connector to tanks */}
@@ -282,11 +283,11 @@ export default function DigitalTwin() {
         {/* Fluid routing flow lines */}
         <FlowLine
           points={[[MX, 434], [MX - 18, 444], [85, 450], [85, 465]]}
-          active={!routeClean} color="#f87171"
+          active={relay1 && !routeClean} color="#f87171"
         />
         <FlowLine
           points={[[MX, 434], [MX + 18, 444], [235, 450], [235, 465]]}
-          active={routeClean} color="#34d399"
+          active={relay1 && routeClean} color="#34d399"
         />
 
         {/* Tank A (Base Brine Reservoir - Stage 1) */}
@@ -364,7 +365,7 @@ export default function DigitalTwin() {
                 ≤500 ppm Dubai Benchmark
               </text>
 
-              {routeClean && (
+              {routeClean && relay1 && (
                 <text x={tx + tw / 2} y={ty + 88} textAnchor="middle" fontSize="8" fill="#34d399" fontFamily="JetBrains Mono" fontWeight="bold">
                   ✓ CLEAN FILLING
                 </text>

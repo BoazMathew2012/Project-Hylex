@@ -70,18 +70,22 @@ function HardwarePanel({ sendWsCommand }) {
   const { state } = useHylex();
   const dispatch  = useDispatch();
   const isAuto    = state.controlMode === 'auto';
+  const isLiveOffline = state.mode === 'live' && state.wsStatus !== 'connected';
 
   const handleServo = (n, val) => {
+    if (isLiveOffline) return;
     dispatch({ type: `SET_SERVO${n}`, payload: val });
     sendWsCommand?.({ cmd: 'servo', id: n, angle: val });
   };
 
   const handleRelay = (n) => {
+    if (isLiveOffline) return;
     dispatch({ type: 'TOGGLE_RELAY', payload: n });
     sendWsCommand?.({ cmd: 'relay', id: n, state: !state[`relay${n}`] });
   };
 
   const handleCarouselStep = () => {
+    if (isLiveOffline) return;
     dispatch({ type: 'SIM_TURRET_INDEX' });
     sendWsCommand?.({ cmd: 'carousel', action: 'step' });
     setTimeout(() => dispatch({ type: 'SERVO2_RESET' }), 3000);
@@ -117,8 +121,18 @@ function HardwarePanel({ sendWsCommand }) {
         </div>
       </div>
 
-      {/* Manual Sliders or AI Loop banner */}
-      {!isAuto ? (
+      {/* Offline Standby Notice or Manual Sliders or AI Loop banner */}
+      {isLiveOffline ? (
+        <div className="bg-slate-950/70 border border-slate-800 rounded-lg p-2.5">
+          <div className="flex items-center gap-1.5 text-slate-400">
+            <Cpu size={12} className="text-slate-500" />
+            <span className="text-xs font-sans font-semibold">ESP32 Hardware Offline</span>
+          </div>
+          <div className="text-[11px] text-slate-400 font-sans mt-1 leading-relaxed">
+            Actuators de-energized in 0° safe standby. Connect to ESP32 at <span className="font-mono text-cyan-300">ws://192.168.4.1:81</span> to stream live positions.
+          </div>
+        </div>
+      ) : !isAuto ? (
         <div className="space-y-2 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800">
           <AngleSlider
             label="Servo #1 — Cam-Pinch Backpressure"
@@ -214,11 +228,12 @@ function ROICalculator() {
   const dispatch   = useDispatch();
   const { plantCapacity, chartHistory } = state;
 
+  const isLiveOffline    = state.mode === 'live' && state.wsStatus !== 'connected';
   // Live counters (demo scale)
-  const elapsed          = chartHistory.length;
-  const mgHarvestedG     = ((elapsed * 0.18) || 2.8).toFixed(1);
-  const caHarvestedG     = ((elapsed * 0.09) || 1.4).toFixed(1);
-  const cleanWaterL      = ((elapsed * 0.52) || 8.3).toFixed(1);
+  const elapsed          = isLiveOffline ? 0 : chartHistory.length;
+  const mgHarvestedG     = (isLiveOffline ? 0 : ((elapsed * 0.18) || 2.8)).toFixed(1);
+  const caHarvestedG     = (isLiveOffline ? 0 : ((elapsed * 0.09) || 1.4)).toFixed(1);
+  const cleanWaterL      = (isLiveOffline ? 0 : ((elapsed * 0.52) || 8.3)).toFixed(1);
 
   // Industrial scale figures
   const mgTonDay         = (plantCapacity * SYNOPSIS.minerals_per_m3_kg / 1000).toFixed(2);
