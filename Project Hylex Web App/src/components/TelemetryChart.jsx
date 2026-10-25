@@ -1,6 +1,6 @@
 import { useHylex } from '../store/HylexContext';
 import { useMemo, useState } from 'react';
-import { BarChart2 } from 'lucide-react';
+import BarChart2 from 'lucide-react/dist/esm/icons/bar-chart-2.mjs';
 import { SYNOPSIS } from '../store/synopsis';
 
 const THRESHOLD      = SYNOPSIS.tds_threshold_ppm;   // 500

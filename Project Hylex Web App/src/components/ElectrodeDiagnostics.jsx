@@ -1,10 +1,12 @@
 import { useMemo } from 'react';
 import { useHylex } from '../store/HylexContext';
 import { evaluateElectrodeDiagnostics, DIAGNOSTIC_SEVERITY } from '../utils/diagnosticsEngine';
-import {
-  Activity, Zap, AlertTriangle, CheckCircle2, ShieldAlert,
-  Wrench
-} from 'lucide-react';
+import Activity from 'lucide-react/dist/esm/icons/activity.mjs';
+import Zap from 'lucide-react/dist/esm/icons/zap.mjs';
+import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle.mjs';
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2.mjs';
+import ShieldAlert from 'lucide-react/dist/esm/icons/shield-alert.mjs';
+import Wrench from 'lucide-react/dist/esm/icons/wrench.mjs';
 
 export default function ElectrodeDiagnostics() {
   const { state } = useHylex();

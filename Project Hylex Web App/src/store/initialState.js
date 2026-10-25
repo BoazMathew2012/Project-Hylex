@@ -16,6 +16,11 @@ export const ZERO_TELEMETRY = {
   routeClean: false,
   latencyMs: null,
   chartHistory: [],
+  // Process state fields
+  processState: 1,     // 1=Standby, 2=Coagulation, 3=Active Separation
+  coagRemaining: 0,
+  podLoad: 0,
+  aiReason: '',
 };
 
 export const SIMULATION_TELEMETRY = {
@@ -72,4 +77,13 @@ export const INITIAL_STATE = {
 
   // Chart history (last 60 points)
   chartHistory: [],
+
+  // ── Process State (ESP32 2-stage handshake) ──
+  processState: 1,     // 1=Standby, 2=Coagulation, 3=Active Separation
+  coagRemaining: 0,    // seconds left in coagulation phase
+  podLoad: 0,          // active pod saturation % from ESP32
+  aiReason: '',        // last ESP32-reported AI routing reason
+
+  // ── Ollama 1.5B Edge Controller Log ──
+  ollamaControllerLog: [],  // [{ts, model, latencyMs, angle, rotatePod, decisionLog}]
 };

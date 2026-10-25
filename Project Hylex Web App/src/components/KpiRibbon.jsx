@@ -1,5 +1,11 @@
 import { useHylex } from '../store/HylexContext';
-import { Droplets, ThermometerSun, TrendingDown, CheckCircle2, AlertTriangle, ArrowRight, WifiOff } from 'lucide-react';
+import Droplets from 'lucide-react/dist/esm/icons/droplets.mjs';
+import ThermometerSun from 'lucide-react/dist/esm/icons/thermometer-sun.mjs';
+import TrendingDown from 'lucide-react/dist/esm/icons/trending-down.mjs';
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2.mjs';
+import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle.mjs';
+import ArrowRight from 'lucide-react/dist/esm/icons/arrow-right.mjs';
+import WifiOff from 'lucide-react/dist/esm/icons/wifi-off.mjs';
 import { SYNOPSIS } from '../store/synopsis';
 
 export default function KpiRibbon() {

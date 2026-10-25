@@ -8,6 +8,8 @@ import ControlPanel from './components/ControlPanel';
 import PredictiveAnalytics from './components/PredictiveAnalytics';
 import ElectrodeDiagnostics from './components/ElectrodeDiagnostics';
 import HylexCopilot from './components/HylexCopilot';
+import ProcessBanner from './components/ProcessBanner';
+import OllamaController from './components/OllamaController';
 
 function MainApp() {
   const [activeView, setActiveView] = useState('dashboard'); // 'dashboard' | 'ai'
@@ -28,6 +30,9 @@ function MainApp() {
         {/* Universal Top KPI Ribbon */}
         <KpiRibbon />
 
+        {/* 2-Stage Process Launcher Banner */}
+        <ProcessBanner />
+
         {/* View 1: Digital Twin & Actuator Hardware Controls */}
         {activeView === 'dashboard' ? (
           <div
@@ -47,6 +52,7 @@ function MainApp() {
             {/* Right Column: Actuator Controls & B2B Circular Economy ROI */}
             <div className="min-h-0 overflow-y-auto pr-0.5" style={{ scrollbarWidth: 'thin' }}>
               <ControlPanel />
+              <OllamaController />
             </div>
           </div>
         ) : (

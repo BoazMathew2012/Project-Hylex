@@ -15,11 +15,22 @@ import {
   DEFAULT_OLLAMA_URL
 } from '../services/ollamaService.js';
 import MarkdownRenderer from './MarkdownRenderer';
-import {
-  Bot, Send, Sparkles, AlertCircle, CheckCircle2,
-  ChevronDown, ChevronUp, Terminal, ShieldCheck,
-  Trash2, Settings, RefreshCw, Square, Cpu, AlertTriangle, X
-} from 'lucide-react';
+import Bot from 'lucide-react/dist/esm/icons/bot.mjs';
+import Send from 'lucide-react/dist/esm/icons/send.mjs';
+import Sparkles from 'lucide-react/dist/esm/icons/sparkles.mjs';
+import AlertCircle from 'lucide-react/dist/esm/icons/alert-circle.mjs';
+import CheckCircle2 from 'lucide-react/dist/esm/icons/check-circle-2.mjs';
+import ChevronDown from 'lucide-react/dist/esm/icons/chevron-down.mjs';
+import ChevronUp from 'lucide-react/dist/esm/icons/chevron-up.mjs';
+import Terminal from 'lucide-react/dist/esm/icons/terminal.mjs';
+import ShieldCheck from 'lucide-react/dist/esm/icons/shield-check.mjs';
+import Trash2 from 'lucide-react/dist/esm/icons/trash-2.mjs';
+import Settings from 'lucide-react/dist/esm/icons/settings.mjs';
+import RefreshCw from 'lucide-react/dist/esm/icons/refresh-cw.mjs';
+import Square from 'lucide-react/dist/esm/icons/square.mjs';
+import Cpu from 'lucide-react/dist/esm/icons/cpu.mjs';
+import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle.mjs';
+import X from 'lucide-react/dist/esm/icons/x.mjs';
 
 const INITIAL_WELCOME_MESSAGE = {
   id: 'welcome-init',

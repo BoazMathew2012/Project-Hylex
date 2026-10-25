@@ -1,4 +1,10 @@
-import { X, Shield, Cpu, DollarSign, Globe, Layers, Users } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x.mjs';
+import Shield from 'lucide-react/dist/esm/icons/shield.mjs';
+import Cpu from 'lucide-react/dist/esm/icons/cpu.mjs';
+import DollarSign from 'lucide-react/dist/esm/icons/dollar-sign.mjs';
+import Globe from 'lucide-react/dist/esm/icons/globe.mjs';
+import Layers from 'lucide-react/dist/esm/icons/layers.mjs';
+import Users from 'lucide-react/dist/esm/icons/users.mjs';
 
 export default function SynopsisModal({ isOpen, onClose }) {
   if (!isOpen) return null;

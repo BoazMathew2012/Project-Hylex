@@ -1,9 +1,18 @@
 import { useState } from 'react';
 import { useHylex, useDispatch } from '../store/HylexContext';
-import {
-  Wifi, WifiOff, Activity, Radio, Zap, RotateCcw, FlaskConical,
-  Shield, FileText, Tv, Sliders, BrainCircuit, Bot
-} from 'lucide-react';
+import Wifi from 'lucide-react/dist/esm/icons/wifi.mjs';
+import WifiOff from 'lucide-react/dist/esm/icons/wifi-off.mjs';
+import Activity from 'lucide-react/dist/esm/icons/activity.mjs';
+import Radio from 'lucide-react/dist/esm/icons/radio.mjs';
+import Zap from 'lucide-react/dist/esm/icons/zap.mjs';
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw.mjs';
+import FlaskConical from 'lucide-react/dist/esm/icons/flask-conical.mjs';
+import Shield from 'lucide-react/dist/esm/icons/shield.mjs';
+import FileText from 'lucide-react/dist/esm/icons/file-text.mjs';
+import Tv from 'lucide-react/dist/esm/icons/tv.mjs';
+import Sliders from 'lucide-react/dist/esm/icons/sliders.mjs';
+import BrainCircuit from 'lucide-react/dist/esm/icons/brain-circuit.mjs';
+import Bot from 'lucide-react/dist/esm/icons/bot.mjs';
 import SynopsisModal from './SynopsisModal';
 import HmiModal from './HmiModal';
 
@@ -36,10 +45,13 @@ export default function ConnectionBar({
   const statusBadge = () => {
     if (isLive) {
       if (state.wsStatus === 'connected') {
+        const isStandby = state.processState === 1;
         return (
           <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-mono">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block" />
-            ESP32 LIVE · {state.latencyMs ?? 12}ms
+            {isStandby
+              ? 'Connected to Hylex Tower (Standby Mode)'
+              : `ESP32 LIVE · ${state.latencyMs ?? 12}ms`}
           </span>
         );
       }

@@ -1,8 +1,10 @@
 import { useHylex, useDispatch } from '../store/HylexContext';
 import { useState } from 'react';
-import {
-  Cpu, RotateCcw, Activity, TrendingUp, Coins
-} from 'lucide-react';
+import Cpu from 'lucide-react/dist/esm/icons/cpu.mjs';
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw.mjs';
+import Activity from 'lucide-react/dist/esm/icons/activity.mjs';
+import TrendingUp from 'lucide-react/dist/esm/icons/trending-up.mjs';
+import Coins from 'lucide-react/dist/esm/icons/coins.mjs';
 import { SYNOPSIS } from '../store/synopsis';
 
 // Animated toggle switch

@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@source "./";
+@source "../index.html";
 
 @theme {
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;

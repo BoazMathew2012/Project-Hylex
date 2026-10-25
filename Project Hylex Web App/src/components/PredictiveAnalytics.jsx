@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react';
 import { useHylex } from '../store/HylexContext';
 import { predictTimeToTarget, RELIABILITY_LEVEL, PREDICTION_STATUS } from '../utils/predictionEngine';
-import {
-  Clock, Target, RotateCcw, Info
-} from 'lucide-react';
+import Clock from 'lucide-react/dist/esm/icons/clock.mjs';
+import Target from 'lucide-react/dist/esm/icons/target.mjs';
+import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw.mjs';
+import Info from 'lucide-react/dist/esm/icons/info.mjs';
 
 /**
  * SVG Chart displaying Observed TDS History + Configured Target Line + Extrapolated Projection

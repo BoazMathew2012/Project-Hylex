@@ -9,18 +9,11 @@ function reducer(state, action) {
     case 'SET_MODE': {
       const mode = action.payload;
       if (mode === 'live') {
-        // If ESP32 is not connected, change all values to 0 instead of freezing
         if (state.wsStatus !== 'connected') {
-          return {
-            ...state,
-            mode: 'live',
-            ...ZERO_TELEMETRY,
-          };
+          return { ...state, mode: 'live', ...ZERO_TELEMETRY };
         }
         return { ...state, mode: 'live' };
       } else {
-        // Switching back to simulation mode
-        // Restore default baseline simulation telemetry if values were at 0
         const shouldRestore = state.tds === 0 && state.tempC === 0;
         return {
           ...state,
@@ -35,16 +28,13 @@ function reducer(state, action) {
     case 'SET_WS_STATUS': {
       const wsStatus = action.payload;
       const isLive = state.mode === 'live';
-      // If the ESP32 is not connected in live mode, change all values to 0
       if (isLive && wsStatus !== 'connected') {
-        return {
-          ...state,
-          wsStatus,
-          ...ZERO_TELEMETRY,
-        };
+        return { ...state, wsStatus, ...ZERO_TELEMETRY };
       }
       return { ...state, wsStatus, latencyMs: action.latencyMs ?? state.latencyMs };
     }
+
+    // ── ESP32 Telemetry (extended with process state fields) ──
     case 'SENSOR_UPDATE': {
       const data = action.payload;
       const tds = data.tds ?? state.tds;
@@ -52,7 +42,6 @@ function reducer(state, action) {
       const isManual = state.controlMode === 'manual';
       const routeClean = tds <= 500;
 
-      // In manual mode, preserve slider positions unless explicitly sent from hardware
       const servo1 = isManual ? (data.servo1 ?? state.servo1) : (data.servo1 ?? (routeClean ? 20 : 55));
       const servo2 = data.servo2 ?? state.servo2;
       const servo3 = isManual ? (data.servo3 ?? state.servo3) : (data.servo3 ?? (routeClean ? 0 : 90));
@@ -61,30 +50,48 @@ function reducer(state, action) {
       const relay1 = data.relay1 !== undefined ? data.relay1 : state.relay1;
       const relay2 = data.relay2 !== undefined ? data.relay2 : state.relay2;
       const relay3 = data.relay3 !== undefined ? data.relay3 : state.relay3;
-      const carouselSlot = data.carouselSlot !== undefined ? data.carouselSlot : state.carouselSlot;
-      const podSaturation = Array.isArray(data.pods) ? data.pods : state.podSaturation;
+      const carouselSlot = data.carouselSlot !== undefined ? data.carouselSlot : (data.pod !== undefined ? data.pod : state.carouselSlot);
+      const podSaturation = Array.isArray(data.pods)
+        ? data.pods
+        : (data.podLoad !== undefined
+          ? state.podSaturation.map((v, i) => i === carouselSlot ? data.podLoad : v)
+          : state.podSaturation);
+
+      // Process state fields from ESP32 firmware
+      const processState = data.state !== undefined ? data.state : state.processState;
+      const coagRemaining = data.coagRemaining !== undefined ? data.coagRemaining : state.coagRemaining;
+      const podLoad = data.podLoad !== undefined ? data.podLoad : state.podLoad;
+      const aiReason = data.aiReason !== undefined ? data.aiReason : state.aiReason;
 
       const now = Date.now();
       const newPoint = { t: now, tds, industrial: Math.round(tds * 82.35) };
       const history = [...state.chartHistory, newPoint].slice(-60);
       return {
         ...state,
-        tds,
-        tempC,
+        tds, tempC,
         routeClean: servo3 === 0,
-        servo1,
-        servo2,
-        servo3,
-        servo4,
-        relay1,
-        relay2,
-        relay3,
+        servo1, servo2, servo3, servo4,
+        relay1, relay2, relay3,
         carouselSlot,
         carouselAngle: carouselSlot * 120,
         podSaturation,
         chartHistory: history,
+        processState, coagRemaining, podLoad, aiReason,
       };
     }
+
+    // ── Process State Override (for local/simulation control) ──
+    case 'SET_PROCESS_STATE':
+      return { ...state, processState: action.payload };
+    case 'SET_COAG_REMAINING':
+      return { ...state, coagRemaining: action.payload };
+
+    // ── Ollama Controller Log ──
+    case 'OLLAMA_CONTROLLER_LOG': {
+      const log = [...state.ollamaControllerLog, action.payload].slice(-20);
+      return { ...state, ollamaControllerLog: log };
+    }
+
     case 'SIM_INJECT_RAW':
       return reducer(state, { type: 'SENSOR_UPDATE', payload: { tds: 780, tempC: state.tempC || 23.4 } });
     case 'SIM_VORTEX_CLEAN':
@@ -179,7 +186,10 @@ export function HylexProvider({ children }) {
       ws.onmessage = (e) => {
         try {
           const data = JSON.parse(e.data);
-          if (data.tds !== undefined) dispatch({ type: 'SENSOR_UPDATE', payload: data });
+          // Extended telemetry: {state, tds, temp, pod, podLoad, coagRemaining, servo1, aiReason}
+          if (data.tds !== undefined || data.state !== undefined) {
+            dispatch({ type: 'SENSOR_UPDATE', payload: data });
+          }
           if (data.pong) dispatch({ type: 'SET_WS_STATUS', payload: 'connected', latencyMs: Date.now() - pingStart });
         } catch {}
       };
@@ -195,6 +205,14 @@ export function HylexProvider({ children }) {
     dispatch({ type: 'SET_WS_STATUS', payload: 'disconnected' });
   }, []);
 
+  // Send raw string commands (for OLLAMA_BACKPRESSURE:XX, ROTATE_POD, START_PROCESS, STOP_PROCESS)
+  const sendWsRaw = useCallback((rawString) => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(rawString);
+    }
+  }, []);
+
+  // Send JSON commands (existing)
   const sendWsCommand = useCallback((cmd) => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify(cmd));
@@ -202,7 +220,7 @@ export function HylexProvider({ children }) {
   }, []);
 
   return (
-    <HylexContext.Provider value={{ state, connect, disconnect, sendWsCommand }}>
+    <HylexContext.Provider value={{ state, connect, disconnect, sendWsCommand, sendWsRaw }}>
       <HylexDispatch.Provider value={dispatch}>
         {children}
       </HylexDispatch.Provider>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { X, Tv } from 'lucide-react';
+import X from 'lucide-react/dist/esm/icons/x.mjs';
+import Tv from 'lucide-react/dist/esm/icons/tv.mjs';
 import { useHylex, useDispatch } from '../store/HylexContext';
 
 export default function HmiModal({ isOpen, onClose }) {

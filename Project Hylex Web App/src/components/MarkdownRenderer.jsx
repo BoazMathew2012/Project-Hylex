@@ -1,7 +1,8 @@
 import { useState, createContext, useContext } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Check, Copy } from 'lucide-react';
+import Check from 'lucide-react/dist/esm/icons/check.mjs';
+import Copy from 'lucide-react/dist/esm/icons/copy.mjs';
 
 const PreContext = createContext(false);
 
