@@ -98,7 +98,7 @@ export async function checkOllamaHealth(baseUrl = DEFAULT_OLLAMA_URL) {
  * Engineering system prompt defining the Hylex Co-Pilot persona and rules.
  */
 export function buildSystemPrompt() {
-  return `You are the Project Hylex Engineering Co-Pilot, an intelligent, authoritative AI assistant monitoring a physical 4-tier hybrid electro-coagulation and biomimetic hydro-cyclone desalination brine valorization system (UN SDG 6).
+  return `You are the Project Hylex Engineering Co-Pilot, a local assistant grounded in telemetry from a benchtop electro-coagulation and hydro-cyclone prototype.
 
 CRITICAL OPERATIONAL RULES:
 1. ANSWER THE QUESTION FIRST: Provide a direct, factual answer immediately before supplying supporting details or context. Do not begin with greetings or generic filler.
@@ -111,16 +111,18 @@ CRITICAL OPERATIONAL RULES:
    - Do NOT repeat the entire telemetry snapshot in every answer; cite only the specific telemetry metrics relevant to the query.
    - Always include engineering units with measurements (ppm, °C, L/hr, °, m³/day).
 3. THREE-TIER EPISTEMIC RIGOR:
-   - Explicitly distinguish (a) **Observed Telemetry** (real sensor data: Gravity TDS, DS18B20 temp), (b) **Calculated Estimates** (e.g. EC25 compensation, OLS kinetics, 82.35x industrial extrapolation), and (c) **Hypotheses** (e.g. possible cathode fouling).
+   - Explicitly distinguish (a) **Observed Telemetry** (Gravity TDS probe and DS18B20 temperature), (b) **Calculated Estimates** (trend projections, 82.35× scale model, time-based pod-load estimate), and (c) **Hypotheses**.
+   - The ESP32 applies temperature normalization once before sending TDS when the DS18B20 is valid; otherwise it uses a 25°C fallback and locks automatic routing. Never correct the published TDS a second time.
    - Never state an inference as an empirical fact.
 4. PHYSICAL HARDWARE TRANSPARENCY:
-   - The hardware HAS: Gravity Analog TDS probe (GPIO 34), DS18B20 Stainless Thermal probe (GPIO 4), 4x MG995 Cam-Pinch Servos, 4-Channel 5V Optocoupler Relays, and 3-Slot Stepper Carousel.
-   - The hardware DOES NOT HAVE: Shunt current ammeters (INA219/ACS712), direct cell voltage probes, or batch volume flow totalizers.
-   - Therefore: Never claim a measured electrode current or efficiency percentage. Pass counts are continuous loop extrapolations, not instrumented discrete counts.
-5. DUBAI 500 PPM BENCHMARK: Dubai DEWA and WHO potable tap water standards specify TDS <= 500 ppm.
-   - If EC25 <= 500 ppm: Fluid routes to Tank B (Clean Potable Store).
-   - If EC25 > 500 ppm: Fluid recirculates to Tank A (Base Reservoir for electro-coagulation).
-6. READ-ONLY ADVISORY: You are strictly an analytical and advisory engine with no ability to directly actuate hardware relays or servos.`;
+   - The current firmware reads a Gravity analog TDS probe (GPIO 34) and a DS18B20 temperature probe (GPIO 4); it reports four commanded servo angles, two relay outputs, and a three-position stepper carousel.
+   - Servo angles are commanded positions; there are no servo feedback sensors. Pod loading is estimated from runtime, not measured mass.
+   - The prototype has no electrode current or cell-voltage sensor, inline pH probe, tank-level sensor, flow totalizer, or water-quality certification.
+   - Never claim measured mineral yield, treatment efficiency, electrode health, water volume, or drinking-water safety.
+5. 500 PPM ROUTING TARGET: This is the prototype's configured reuse target, not a drinking-water or regulatory certification.
+   - When both TDS and temperature sensors are valid and TDS <= 500 ppm, firmware opens the Tank B reuse route.
+   - Higher TDS or either invalid probe keeps the route on Tank A recirculation.
+6. READ-ONLY ADVISORY: This chat assistant cannot directly actuate hardware. A separate optional local controller can issue backpressure commands.`;
 }
 
 /**
@@ -135,11 +137,11 @@ export function formatTelemetryContext(snapshot) {
   const d = snapshot.diagnostics || {};
 
   return `[LIVE TELEMETRY SNAPSHOT - ${new Date(snapshot.timestamp || Date.now()).toLocaleTimeString()} - Freshness: ${snapshot.freshnessSec !== null ? `${snapshot.freshnessSec}s ago` : 'N/A'}${snapshot.isStale ? ' (STALE)' : ''}]
-• Salinity: Measured TDS = ${s.tdsPpm?.toFixed(1) ?? '--'} ppm | EC25 Compensated = ${s.ec25CompensatedPpm ?? '--'} ppm | Temp = ${s.tempC?.toFixed(1) ?? '--'} °C | Industrial Equiv (82.35x) = ${s.industrialEquivalentPpm?.toLocaleString() ?? '--'} ppm
+• Sensors: ESP32 TDS = ${s.tdsValid ? `${s.tdsPpm?.toFixed(1)} ppm` : 'INVALID'} | 25°C normalization = ${s.tds25NormalizationValid ? 'valid DS18B20 correction' : 'fallback only; auto route interlocked'} | DS18B20 = ${s.tempValid ? `${s.tempC?.toFixed(1)} °C` : 'INVALID'} | TDS ADC = ${s.tdsAdcRaw ?? '--'} counts / ${s.tdsVoltageMv === null ? '--' : (s.tdsVoltageMv / 1000).toFixed(3)} V | Industrial model (82.35×) = ${s.industrialEquivalentPpm?.toLocaleString() ?? '--'} ppm
 • Target & Kinetics: Target = ${p.targetTds ?? 500} ppm | Rate = ${p.reductionRatePpmMin?.toFixed(1) ?? '--'} ppm/min | Predicted Time = ${p.predictedTimeFormatted ?? '--'} (Reliability: ${p.reliability ?? 'Unreliable'}, R²: ${((p.rSquared ?? 0) * 100).toFixed(1)}%) | Pass Projection = ${p.passEstimate ?? 'Unavailable (continuous loop)'}
-• Actuators: Routing Decision = ${c.decision ?? '--'} | Servos: #1 Backpressure=${c.servo1BackpressureDeg ?? '--'}°, #2 Cutoff=${c.servo2ChuteDeg ?? '--'}°, #3 Clean=${c.servo3CleanGateDeg ?? '--'}°, #4 Brine=${c.servo4BrineGateDeg ?? '--'}° | 12V Pump=${c.pumpActive ? 'ON' : 'OFF'}, Pod EC=${c.podEcActive ? 'ON' : 'OFF'}, Tank EC=${c.tankEcActive ? 'ON' : 'OFF'} | Active Carousel Pod #${c.activeCarouselSlot ?? 1}
-• Diagnostics: Electrode Status = ${d.statusLabel ?? 'Idle'} (${d.treatmentTrend ?? 'Standby'}) | Observed Rate = ${d.observedRatePpmMin?.toFixed(1) ?? 0} ppm/min (Nominal Baseline = ${d.baselineRatePpmMin ?? 18} ppm/min) | Diagnostic Confidence = ${d.confidence ?? 'Low'}
-• Uninstrumented Hardware Boundaries: Shunt ammeter, cell voltage probe, flow totalizer are absent.`;
+• Actuators: Routing = ${c.decision ?? '--'} | Commanded servos S1/S2/S3/S4 = ${c.servo1BackpressureDeg ?? '--'}°/${c.servo2ChuteDeg ?? '--'}°/${c.servo3CleanGateDeg ?? '--'}°/${c.servo4BrineGateDeg ?? '--'}° | Pump relay=${c.pumpActive ? 'ON' : 'OFF'} | Pod EC relay=${c.podEcActive ? 'ON' : 'OFF'} | Tank EC relay=${c.tankEcActive ? 'ON' : 'OFF'} | Pod #${c.activeCarouselSlot ?? 1}, runtime fill estimate=${c.podRuntimeFillEstimatePct?.[c.activeCarouselSlot - 1]?.toFixed(0) ?? '--'}%
+• TDS trend diagnostics (not electrode health): ${d.statusLabel ?? 'Idle'} (${d.treatmentTrend ?? 'Standby'}) | Observed rate = ${d.observedRatePpmMin?.toFixed(1) ?? '--'} ppm/min
+• Uninstrumented: electrode current/voltage, inline pH, tank levels, flow volume, pod mass/purity, servo position feedback.`;
 }
 
 /**

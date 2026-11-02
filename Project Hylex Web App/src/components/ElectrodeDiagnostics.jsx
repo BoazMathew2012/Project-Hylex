@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { useHylex } from '../store/HylexContext';
-import { evaluateElectrodeDiagnostics, DIAGNOSTIC_SEVERITY } from '../utils/diagnosticsEngine';
+import { useHylex } from '../store/hooks';
+import { evaluateTdsTrendDiagnostics, DIAGNOSTIC_SEVERITY } from '../utils/diagnosticsEngine';
 import Activity from 'lucide-react/dist/esm/icons/activity.mjs';
 import Zap from 'lucide-react/dist/esm/icons/zap.mjs';
 import AlertTriangle from 'lucide-react/dist/esm/icons/alert-triangle.mjs';
@@ -13,7 +13,7 @@ export default function ElectrodeDiagnostics() {
 
   // Compute live diagnostics from treatment kinetics
   const diagnostics = useMemo(() => {
-    return evaluateElectrodeDiagnostics(state);
+    return evaluateTdsTrendDiagnostics(state);
   }, [state]);
 
   const severityBadge = {
@@ -30,27 +30,28 @@ export default function ElectrodeDiagnostics() {
     [DIAGNOSTIC_SEVERITY.ALERT]: <ShieldAlert size={16} className="text-red-400" />,
   }[diagnostics.severity];
 
-  const perfPct = Math.min(100, Math.round(diagnostics.performanceRatio * 100));
+  const reductionRate = diagnostics.observedReductionRatePpmMin;
+  const trendWidth = Math.min(50, Math.abs(reductionRate));
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/85 backdrop-blur-sm p-3.5 flex flex-col gap-3 h-full shadow-sm">
+    <div className="hylex-panel rounded-[22px] p-4 sm:p-5 flex flex-col gap-4 h-full shadow-sm overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-lg bg-amber-500/10 border border-amber-500/25 text-amber-400">
-            <Zap size={15} />
+          <div className="w-9 h-9 grid place-items-center rounded-xl bg-amber-300/[.08] border border-amber-200/10 text-amber-200">
+            <Zap size={16} strokeWidth={1.8} />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-sans font-semibold text-white tracking-wide">
-                Electrode Health &amp; Fouling Diagnostics
+              <span className="text-sm font-semibold text-white tracking-tight">
+                Sensor diagnostics
               </span>
               <span className={`text-[10px] px-2 py-0.5 rounded-full border font-mono ${severityBadge}`}>
                 {diagnostics.statusLabel}
               </span>
             </div>
-            <div className="text-[10px] text-slate-400 font-sans">
-              Kinetic treatment rates &amp; empirical performance tracking
+            <div className="text-[10px] text-slate-500 mt-0.5">
+              Observed trend · not electrode health
             </div>
           </div>
         </div>
@@ -84,28 +85,25 @@ export default function ElectrodeDiagnostics() {
         </div>
       </div>
 
-      {/* Performance vs Baseline Gauge */}
+      {/* Signed TDS trend gauge: positive means TDS falling, negative means rising. */}
       <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800 space-y-2 flex-shrink-0">
         <div className="flex justify-between items-center text-xs font-sans">
-          <span className="text-slate-300 font-medium">Observed TDS Reduction Velocity</span>
-          <span className="font-bold font-mono text-cyan-300">{diagnostics.observedReductionRatePpmMin.toFixed(1)} ppm/min</span>
+          <span className="text-slate-300 font-medium">Observed TDS change</span>
+          <span className={`font-bold font-mono ${reductionRate > 3 ? 'text-emerald-300' : reductionRate < -3 ? 'text-amber-300' : 'text-cyan-300'}`}>
+            {reductionRate > 0 ? '+' : ''}{reductionRate.toFixed(1)} ppm/min reduction
+          </span>
         </div>
-        <div className="relative h-2 rounded-full bg-slate-800 overflow-hidden">
+        <div className="relative h-2 rounded-full bg-slate-800">
           <div
-            className={`h-full rounded-full transition-all duration-700 ${
-              perfPct >= 70 ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' :
-              perfPct >= 30 ? 'bg-gradient-to-r from-amber-500 to-amber-400' :
-              'bg-gradient-to-r from-red-500 to-red-400'
-            }`}
-            style={{ width: `${perfPct}%` }}
+            className={`absolute top-0 h-full rounded-full transition-all duration-700 ${reductionRate >= 0 ? 'bg-emerald-400' : 'bg-amber-400'}`}
+            style={{ width: `${trendWidth}%`, left: `${reductionRate >= 0 ? 50 : 50 - trendWidth}%` }}
           />
-          {/* 100% nominal baseline marker */}
-          <div className="absolute top-0 bottom-0 w-0.5 bg-slate-400" style={{ left: '100%' }} />
+          <div className="absolute top-[-2px] bottom-[-2px] w-0.5 bg-slate-200" style={{ left: '50%' }} />
         </div>
         <div className="flex justify-between text-[10px] font-sans text-slate-400">
-          <span>0 ppm/min</span>
-          <span>Baseline: {diagnostics.baselineRatePpmMin} ppm/min (Nominal Flow)</span>
-          <span className="text-emerald-400 font-medium">{perfPct}% of baseline</span>
+          <span>TDS rising</span>
+          <span>0 · no clear change</span>
+          <span>TDS falling</span>
         </div>
       </div>
 
@@ -131,7 +129,7 @@ export default function ElectrodeDiagnostics() {
 
         {/* Missing Sensor Boundaries */}
         <div className="mt-3 text-[10px] font-sans text-slate-400 uppercase tracking-wider font-semibold">
-          Uninstrumented Hardware Boundaries (Diagnostic Disclosures)
+          Additional Sensors Needed for Electrode / Yield Diagnosis
         </div>
         <div className="space-y-1.5 text-[11px] font-sans">
           {diagnostics.missingSensors.map((s, i) => (

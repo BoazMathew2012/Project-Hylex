@@ -1,4 +1,4 @@
-import { useHylex, useDispatch } from '../store/HylexContext';
+import { useHylex, useDispatch } from '../store/hooks';
 import { useState } from 'react';
 import Cpu from 'lucide-react/dist/esm/icons/cpu.mjs';
 import RotateCcw from 'lucide-react/dist/esm/icons/rotate-ccw.mjs';
@@ -7,59 +7,40 @@ import TrendingUp from 'lucide-react/dist/esm/icons/trending-up.mjs';
 import Coins from 'lucide-react/dist/esm/icons/coins.mjs';
 import { SYNOPSIS } from '../store/synopsis';
 
-// Animated toggle switch
-function Toggle({ value, onChange, label, sublabel, color = 'emerald' }) {
-  const activeStyles = {
-    emerald: 'bg-emerald-500 border-emerald-400',
-    red:     'bg-red-500 border-red-400',
-    amber:   'bg-amber-500 border-amber-400',
-    cyan:    'bg-cyan-500 border-cyan-400',
-  };
-
+function RelayStatus({ value, label, sublabel }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-1">
-      <div className="min-w-0 flex-1">
-        <div className="text-xs font-sans text-slate-200 font-medium leading-tight">{label}</div>
-        {sublabel && <div className="text-[10px] font-sans text-slate-400 truncate leading-tight mt-0.5">{sublabel}</div>}
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-white/[.045] bg-white/[.022] px-3 py-2.5">
+      <div className="flex items-center gap-2 min-w-0">
+        <span className={`h-2 w-2 rounded-full flex-shrink-0 ${value ? 'bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.45)]' : 'bg-slate-600'}`} />
+        <div className="min-w-0">
+          <div className="text-[12px] font-medium text-slate-200 leading-tight">{label}</div>
+          {sublabel && <div className="text-[10px] font-sans text-slate-400 truncate leading-tight mt-0.5">{sublabel}</div>}
+        </div>
       </div>
-      <button
-        type="button"
-        role="switch"
-        aria-checked={value}
-        onClick={() => onChange(!value)}
-        className={`relative inline-flex h-5 w-9 flex-shrink-0 cursor-pointer rounded-full p-0.5 border transition-colors duration-200 ease-in-out focus:outline-none ${
-          value ? activeStyles[color] : 'bg-slate-800 border-slate-700'
-        }`}
-      >
-        <span
-          className={`pointer-events-none inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow-sm transition-transform duration-200 ease-in-out ${
-            value ? 'translate-x-4' : 'translate-x-0'
-          }`}
-        />
-      </button>
+      <span className={`text-[10px] font-mono font-bold ${value ? 'text-emerald-300' : 'text-slate-500'}`}>{value ? 'ON' : 'OFF'}</span>
     </div>
   );
 }
 
 // Angle slider
-function AngleSlider({ value, onChange, label, sublabel, color = 'cyan', min = 0, max = 90 }) {
+function AngleSlider({ value, onChange, label, sublabel, color = 'cyan', min = 0, max = 90, disabled = false }) {
   const pct = ((value - min) / (max - min)) * 100;
   const colorMap = { cyan: '#22d3ee', amber: '#fbbf24', emerald: '#34d399', red: '#f87171' };
   const c = colorMap[color];
   return (
-    <div className="py-1">
-      <div className="flex justify-between items-baseline mb-1">
+    <div className="group/slider py-1.5">
+      <div className="flex justify-between items-baseline mb-2">
         <div>
-          <span className="text-xs font-sans text-slate-200 font-medium">{label}</span>
-          {sublabel && <div className="text-[10px] font-sans text-slate-400">{sublabel}</div>}
+          <span className="text-[12px] text-slate-200 font-medium">{label}</span>
+          {sublabel && <div className="text-[10px] text-slate-500 mt-0.5">{sublabel}</div>}
         </div>
         <span className="text-xs font-mono font-bold" style={{ color: c }}>{value}°</span>
       </div>
       <div className="relative h-2 rounded-full bg-slate-800">
         <div className="absolute h-full rounded-full transition-all" style={{ width: `${pct}%`, background: c }} />
-        <input type="range" min={min} max={max} value={value}
+        <input type="range" min={min} max={max} value={value} disabled={disabled}
           onChange={e => onChange(Number(e.target.value))}
-          className="absolute inset-0 w-full opacity-0 cursor-pointer h-full" />
+          className={`absolute inset-0 w-full opacity-0 h-full ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`} />
         <div className="absolute top-1/2 -translate-y-1/2 w-3.5 h-3.5 rounded-full border-2 shadow-sm transition-all"
           style={{ left: `calc(${pct}% - 7px)`, background: c, borderColor: '#0f172a' }} />
       </div>
@@ -73,125 +54,138 @@ function HardwarePanel({ sendWsCommand }) {
   const dispatch  = useDispatch();
   const isAuto    = state.controlMode === 'auto';
   const isLiveOffline = state.mode === 'live' && state.wsStatus !== 'connected';
+  const isCarouselRotating = state.processState === 4;
+  const canStepCarousel = state.processState === 1 || state.processState === 3;
+  const carouselDisabled = isLiveOffline || isCarouselRotating || !canStepCarousel;
+  const autoSensorsReady = state.tdsValid && state.tempValid;
+  const autoControlActive = autoSensorsReady && state.processState === 3;
 
   const handleServo = (n, val) => {
-    if (isLiveOffline) return;
+    if (isLiveOffline || isCarouselRotating) return;
     dispatch({ type: `SET_SERVO${n}`, payload: val });
     sendWsCommand?.({ cmd: 'servo', id: n, angle: val });
   };
 
-  const handleRelay = (n) => {
-    if (isLiveOffline) return;
-    dispatch({ type: 'TOGGLE_RELAY', payload: n });
-    sendWsCommand?.({ cmd: 'relay', id: n, state: !state[`relay${n}`] });
-  };
-
   const handleCarouselStep = () => {
-    if (isLiveOffline) return;
-    dispatch({ type: 'SIM_TURRET_INDEX' });
+    if (carouselDisabled) return;
     sendWsCommand?.({ cmd: 'carousel', action: 'step' });
-    setTimeout(() => dispatch({ type: 'SERVO2_RESET' }), 3000);
   };
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/85 backdrop-blur-sm p-3 flex flex-col gap-3 shadow-sm">
+    <div className="hylex-panel rounded-[22px] p-4 sm:p-5 flex flex-col gap-4 shadow-sm">
       {/* Header + mode toggle */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="p-1 rounded-md bg-amber-500/10 border border-amber-500/25 text-amber-400">
-            <Cpu size={13} />
+          <div className="w-9 h-9 grid place-items-center rounded-xl bg-amber-300/[.08] border border-amber-200/10 text-amber-200">
+            <Cpu size={16} strokeWidth={1.8} />
           </div>
-          <span className="text-xs font-sans font-semibold text-white tracking-wide">Actuator Control</span>
+            <span className="text-sm font-semibold text-white tracking-tight">Actuator controls</span>
         </div>
-        <div className="flex items-center bg-slate-950 rounded-lg p-0.5 border border-slate-800">
+        <div className="flex items-center rounded-full p-1 border border-white/[.06] bg-slate-950/50">
           <button
             type="button"
             onClick={() => { dispatch({ type: 'SET_CONTROL_MODE', payload: 'auto' }); sendWsCommand?.({ cmd: 'mode', mode: 'auto' }); }}
-            className={`px-2.5 py-1 rounded text-[11px] font-sans font-medium transition-colors ${
-              isAuto ? 'bg-slate-800 text-emerald-300 border border-emerald-500/30' : 'text-slate-500 hover:text-slate-300'
+            className={`px-3 py-1.5 rounded-full text-[10px] font-medium transition-all ${
+              isAuto ? 'bg-white/[.09] text-white shadow-sm' : 'text-slate-400 hover:text-white'
             }`}>
-            AI Auto
+            Auto valves
           </button>
           <button
             type="button"
             onClick={() => { dispatch({ type: 'SET_CONTROL_MODE', payload: 'manual' }); sendWsCommand?.({ cmd: 'mode', mode: 'manual' }); }}
-            className={`px-2.5 py-1 rounded text-[11px] font-sans font-medium transition-colors ${
-              !isAuto ? 'bg-slate-800 text-amber-300 border border-amber-500/30' : 'text-slate-500 hover:text-slate-300'
+            className={`px-3 py-1.5 rounded-full text-[10px] font-medium transition-all ${
+              !isAuto ? 'bg-white/[.09] text-white shadow-sm' : 'text-slate-400 hover:text-white'
             }`}>
-            Manual
+            Manual valves
           </button>
         </div>
       </div>
 
       {/* Offline Standby Notice or Manual Sliders or AI Loop banner */}
       {isLiveOffline ? (
-        <div className="bg-slate-950/70 border border-slate-800 rounded-lg p-2.5">
-          <div className="flex items-center gap-1.5 text-slate-400">
-            <Cpu size={12} className="text-slate-500" />
-            <span className="text-xs font-sans font-semibold">ESP32 Hardware Offline</span>
+        <div className="rounded-2xl border border-rose-200/10 bg-rose-300/[.035] p-4">
+          <div className="flex items-center gap-2.5 text-rose-100/90">
+            <span className="w-8 h-8 rounded-xl grid place-items-center bg-rose-200/[.07] text-rose-200"><Cpu size={14} /></span>
+            <span className="text-xs font-semibold">Controller offline</span>
           </div>
-          <div className="text-[11px] text-slate-400 font-sans mt-1 leading-relaxed">
-            Actuators de-energized in 0° safe standby. Connect to ESP32 at <span className="font-mono text-cyan-300">ws://192.168.4.1:81</span> to stream live positions.
+          <div className="text-[11px] text-slate-400 mt-2 leading-relaxed">
+            Reconnect the ESP32 to see readings and use controls.
           </div>
         </div>
       ) : !isAuto ? (
-        <div className="space-y-2 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800">
+        <div className="space-y-3 rounded-2xl bg-slate-950/35 p-4 border border-white/[.055]">
           <AngleSlider
-            label="Servo #1 — Cam-Pinch Backpressure"
-            sublabel="MG995 · vortex inlet line"
+            label="Backpressure valve"
+            sublabel="Servo 1"
             value={state.servo1} color="cyan"
+            min={20} max={70}
+            disabled={isCarouselRotating}
             onChange={v => handleServo(1, v)}
           />
           <AngleSlider
-            label="Servo #2 — Drop Chute Cutoff"
-            sublabel="MG995 · carousel index pinch"
+            label="Chute valve"
+            sublabel="Servo 2"
             value={state.servo2} color="amber"
+            min={15} max={85}
+            disabled={isCarouselRotating}
             onChange={v => handleServo(2, v)}
           />
           <AngleSlider
-            label="Servo #3 — Clean Gate (Tank B)"
-            sublabel="MG995 · silicone cam-pinch"
+            label="Reuse gate"
+            sublabel="Servo 3"
             value={state.servo3} color="emerald"
+            min={15} max={85}
+            disabled={isCarouselRotating}
             onChange={v => handleServo(3, v)}
           />
           <AngleSlider
-            label="Servo #4 — Brine Gate (Tank A)"
-            sublabel="MG995 · recirculation loop"
+            label="Brine gate"
+            sublabel="Servo 4"
             value={state.servo4} color="red"
+            min={15} max={85}
+            disabled={isCarouselRotating}
             onChange={v => handleServo(4, v)}
           />
         </div>
       ) : (
-        <div className="bg-emerald-500/10 border border-emerald-500/25 rounded-lg p-2.5">
-          <div className="flex items-center gap-1.5 text-emerald-400">
-            <Activity size={12} />
-            <span className="text-xs font-sans font-semibold">Autonomous AI Gating Active</span>
+        <div className={`${autoControlActive ? 'bg-emerald-300/[.045] border-emerald-200/10' : autoSensorsReady ? 'bg-cyan-300/[.045] border-cyan-200/10' : 'bg-amber-300/[.045] border-amber-200/10'} border rounded-2xl p-4`}>
+          <div className={`flex items-center gap-1.5 ${autoControlActive ? 'text-emerald-400' : autoSensorsReady ? 'text-cyan-300' : 'text-amber-300'}`}>
+            <Activity size={12} className={autoControlActive ? 'animate-pulse' : ''} />
+            <span className="text-xs font-sans font-semibold">
+              {autoControlActive ? 'ESP32 Auto Control Active' : autoSensorsReady ? 'ESP32 Auto Ready · Waiting' : 'Auto Routing Interlocked'}
+            </span>
           </div>
-          <div className="text-[11px] text-slate-300 font-sans mt-1 leading-relaxed">
-            ESP32 reads Gravity TDS + DS18B20 to auto-gate MG995 silicone cam-pinch valves at the {SYNOPSIS.tds_threshold_ppm} ppm potable threshold.
+          <div className="text-[11px] text-slate-400 mt-2 leading-relaxed">
+            {autoSensorsReady
+              ? autoControlActive
+                ? `ESP32 routes at the ${SYNOPSIS.tds_threshold_ppm} ppm prototype reuse target and adjusts backpressure from the rolling TDS trend.`
+                : 'Both probes are valid. Automatic routing and trend control run during vortex separation.'
+              : !state.tdsValid
+                ? 'TDS probe is invalid. ESP32 keeps flow on the recirculation path until both probes are valid.'
+                : 'Temperature probe is invalid. ESP32 keeps flow on the recirculation path until both probes are valid.'}
           </div>
         </div>
       )}
 
-      {/* Relay banks — 4-ch optocoupler relay */}
-      <div className="space-y-1 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800">
-        <div className="text-[10px] text-slate-400 font-sans uppercase tracking-wider font-semibold mb-1">
-          5V Optocoupler Power Relays
+      {/* The process state machine owns these relays; the UI reports output commands, not contact feedback. */}
+      <div className="space-y-2 rounded-2xl bg-slate-950/35 p-3 border border-white/[.055]">
+        <div className="flex items-center justify-between px-1 pb-1">
+          <div className="text-[10px] text-slate-400 uppercase tracking-[.14em] font-semibold">
+            Power
+          </div>
+          <div className="text-[9px] text-slate-600">Controller output</div>
         </div>
-        <Toggle
-          value={state.relay1} onChange={() => handleRelay(1)} color="cyan"
-          label="Ch1: 12V Brushless Centrifugal Pump"
-          sublabel="240–400 L/hr magnetic drive"
+        <RelayStatus
+          value={state.relay1}
+          label="Pump"
         />
-        <Toggle
-          value={state.relay2} onChange={() => handleRelay(2)} color="amber"
-          label="Ch2: Pod Electro-Crystallisation"
-          sublabel="Graphite anode (+12V) / SS304 mesh (-12V)"
+        <RelayStatus
+          value={state.relay2}
+          label="Pod EC"
         />
-        <Toggle
-          value={state.relay3} onChange={() => handleRelay(3)} color="red"
-          label="Ch3: Tank A EC Coagulation"
-          sublabel="Submerged electrodes + NaHCO₃ catalyst"
+        <RelayStatus
+          value={state.relay3}
+          label="Tank EC"
         />
       </div>
 
@@ -199,14 +193,18 @@ function HardwarePanel({ sendWsCommand }) {
       <button
         type="button"
         onClick={handleCarouselStep}
-        className="flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 border border-slate-700 text-amber-300 text-xs font-sans font-medium transition-colors shadow-sm"
+        disabled={carouselDisabled}
+        className={`hylex-carousel-button flex items-center justify-center gap-2.5 py-3 px-4 rounded-2xl border text-xs font-semibold transition-all shadow-sm ${
+          carouselDisabled
+            ? 'bg-white/[.025] border-white/[.045] text-slate-600 cursor-not-allowed'
+            : 'border-amber-200/15 text-amber-100'
+        }`}
       >
-        <RotateCcw size={13} className="text-amber-400" />
-        <span>Step Stepper Turret (+120°)</span>
-        <span className="text-[10px] text-slate-400 font-mono">→ Pod #{((state.carouselSlot + 1) % 3) + 1}</span>
+        <RotateCcw size={13} className={`text-amber-400 ${isCarouselRotating ? 'animate-spin' : ''}`} />
+        <span>{isCarouselRotating ? 'Moving…' : canStepCarousel ? 'Advance carousel' : 'Carousel unavailable'}</span>
       </button>
 
-      {/* Live servo angle summary */}
+      {/* Last commanded servo angles; there is no physical position sensor. */}
       <div className="grid grid-cols-4 gap-1.5 text-center">
         {[
           { l: 'S1 BackP', v: `${state.servo1}°`, c: 'text-cyan-400' },
@@ -224,18 +222,11 @@ function HardwarePanel({ sendWsCommand }) {
   );
 }
 
-// ── B2B ROI & Mineral Harvester ─────────────────────────────────────────────
+// ── Scenario economics and instrumentation-aware yield ──────────────────────
 function ROICalculator() {
   const { state }  = useHylex();
   const dispatch   = useDispatch();
-  const { plantCapacity, chartHistory } = state;
-
-  const isLiveOffline    = state.mode === 'live' && state.wsStatus !== 'connected';
-  // Live counters (demo scale)
-  const elapsed          = isLiveOffline ? 0 : chartHistory.length;
-  const mgHarvestedG     = (isLiveOffline ? 0 : ((elapsed * 0.18) || 2.8)).toFixed(1);
-  const caHarvestedG     = (isLiveOffline ? 0 : ((elapsed * 0.09) || 1.4)).toFixed(1);
-  const cleanWaterL      = (isLiveOffline ? 0 : ((elapsed * 0.52) || 8.3)).toFixed(1);
+  const { plantCapacity } = state;
 
   // Industrial scale figures
   const mgTonDay         = (plantCapacity * SYNOPSIS.minerals_per_m3_kg / 1000).toFixed(2);
@@ -248,11 +239,11 @@ function ROICalculator() {
   const zldMin           = SYNOPSIS.conventional_zld_min_usd;
   const savedVsZld       = ((zldMin - hylexSell) / 1000).toFixed(0);
 
-  const hylexPerM3       = ((hylexSell / (plantCapacity * 365)) * 1000).toFixed(2);
-  const zldPerM3         = ((zldMin    / (plantCapacity * 365)) * 1000).toFixed(2);
+  const hylexPer1000M3   = ((hylexSell / (plantCapacity * 365)) * 1000).toFixed(0);
+  const zldPer1000M3     = ((zldMin    / (plantCapacity * 365)) * 1000).toFixed(0);
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/85 backdrop-blur-sm p-3 flex flex-col gap-3 shadow-sm">
+    <div className="hylex-panel rounded-[22px] p-4 sm:p-5 flex flex-col gap-4 shadow-sm">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <div className="p-1 rounded-md bg-emerald-500/10 border border-emerald-500/25 text-emerald-400">
@@ -260,36 +251,36 @@ function ROICalculator() {
           </div>
           <span className="text-xs font-sans font-semibold text-white tracking-wide">B2B ROI &amp; Minerals</span>
         </div>
-        <span className="text-[10px] font-sans text-emerald-300 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/25">
-          ZLD Disruptor
+      <span className="text-[10px] font-sans text-cyan-300 bg-cyan-500/10 px-2 py-0.5 rounded-full border border-cyan-500/25">
+          SCENARIO MODEL
         </span>
       </div>
 
-      {/* Live mineral counters */}
+      {/* Show uninstrumented prototype yield honestly; show projections separately. */}
       <div className="grid grid-cols-2 gap-2">
         <div className="bg-slate-950/60 border border-slate-800 rounded-lg p-2">
-          <div className="text-[10px] text-slate-400 font-sans font-medium">Mg(OH)₂ Harvested</div>
+          <div className="text-[10px] text-slate-400 font-sans font-medium">Mineral mass measured</div>
           <div className="text-base font-bold font-mono text-emerald-400 leading-tight my-0.5">
-            {mgHarvestedG}<span className="text-[10px] text-slate-400 ml-0.5 font-normal">g</span>
+            --<span className="text-[10px] text-slate-400 ml-0.5 font-normal">g</span>
           </div>
-          <div className="text-[10px] text-slate-500 font-mono">{mgTonDay} t/d industrial</div>
+          <div className="text-[10px] text-slate-500 font-mono">Model target: {mgTonDay} t/d at scale</div>
         </div>
         <div className="bg-slate-950/60 border border-slate-800 rounded-lg p-2">
-          <div className="text-[10px] text-slate-400 font-sans font-medium">Clean Potable Yield</div>
+          <div className="text-[10px] text-slate-400 font-sans font-medium">Water volume measured</div>
           <div className="text-base font-bold font-mono text-cyan-400 leading-tight my-0.5">
-            {cleanWaterL}<span className="text-[10px] text-slate-400 ml-0.5 font-normal">L</span>
+            --<span className="text-[10px] text-slate-400 ml-0.5 font-normal">L</span>
           </div>
-          <div className="text-[10px] text-slate-500 font-mono">{cleanM3Day} m³/d industrial</div>
+          <div className="text-[10px] text-slate-500 font-mono">Model target: {cleanM3Day} m³/day</div>
         </div>
         <div className="bg-slate-950/60 border border-slate-800 rounded-lg p-2">
-          <div className="text-[10px] text-slate-400 font-sans font-medium">Net Cost Reduction</div>
+          <div className="text-[10px] text-slate-400 font-sans font-medium">Scenario cost reduction</div>
           <div className="text-base font-bold font-mono text-amber-400 leading-tight my-0.5">{costReductionPct}%</div>
           <div className="text-[10px] text-slate-500 font-sans">vs. thermal evaporators</div>
         </div>
         <div className="bg-slate-950/60 border border-slate-800 rounded-lg p-2">
-          <div className="text-[10px] text-slate-400 font-sans font-medium">CAPEX Savings</div>
+          <div className="text-[10px] text-slate-400 font-sans font-medium">CAPEX saving vs. ZLD floor</div>
           <div className="text-base font-bold font-mono text-purple-300 leading-tight my-0.5">${savedVsZld}k</div>
-          <div className="text-[10px] text-slate-500 font-sans">vs. $250k–$2M ZLD</div>
+          <div className="text-[10px] text-slate-500 font-sans">Scenario comparison only</div>
         </div>
       </div>
 
@@ -315,22 +306,22 @@ function ROICalculator() {
       {/* CAPEX comparison bars */}
       <div className="space-y-1.5 bg-slate-950/60 p-2.5 rounded-lg border border-slate-800">
         <div className="text-[10px] text-slate-400 font-sans uppercase tracking-wider font-semibold">
-          CAPEX Normalized / m³ / year
+          CAPEX per 1,000 m³ annual throughput · scenario estimate
         </div>
         <div>
           <div className="flex justify-between text-[10px] font-sans mb-1">
             <span className="text-emerald-300 font-medium">Hylex System ($75k)</span>
-            <span className="text-emerald-300 font-mono font-bold">${hylexPerM3}</span>
+            <span className="text-emerald-300 font-mono font-bold">${hylexPer1000M3}</span>
           </div>
           <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
             <div className="h-full rounded-full bg-emerald-500 transition-all duration-700"
-              style={{ width: `${Math.min(100, (parseFloat(hylexPerM3) / parseFloat(zldPerM3)) * 100)}%` }} />
+              style={{ width: `${Math.min(100, (parseFloat(hylexPer1000M3) / parseFloat(zldPer1000M3)) * 100)}%` }} />
           </div>
         </div>
         <div>
           <div className="flex justify-between text-[10px] font-sans mb-1">
             <span className="text-red-300 font-medium">Conventional ZLD ($250k)</span>
-            <span className="text-red-300 font-mono font-bold">${zldPerM3}</span>
+            <span className="text-red-300 font-mono font-bold">${zldPer1000M3}</span>
           </div>
           <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
             <div className="h-full rounded-full bg-red-500/70 w-full" />
@@ -338,11 +329,11 @@ function ROICalculator() {
         </div>
       </div>
 
-      {/* Mineral Ticker */}
+      {/* Prototype measurement limitation */}
       <div className="flex items-center gap-2 bg-slate-950/60 rounded-lg p-2 border border-slate-800 text-[11px] font-sans text-slate-300">
         <TrendingUp size={13} className="text-emerald-400 flex-shrink-0" />
-        <span className="truncate">
-          <strong className="text-emerald-300 font-mono">Mg(OH)₂</strong> {mgHarvestedG}g · <strong className="text-cyan-300 font-mono">CaCO₃</strong> {caHarvestedG}g · <strong className="text-purple-300 font-mono">H₂</strong> Vent
+        <span>
+          Prototype has no mass, flow, or energy meter. Pod fill is an estimate; weigh dried solids and meter Tank B volume for measured yield.
         </span>
       </div>
     </div>
@@ -351,53 +342,42 @@ function ROICalculator() {
 
 export default function ControlPanel() {
   const { sendWsCommand } = useHylex();
-  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'hardware' | 'roi'
+  const [activeTab, setActiveTab] = useState('hardware'); // 'hardware' | 'roi'
 
   return (
-    <div className="flex flex-col gap-2 h-full overflow-hidden">
+      <div className="flex flex-col gap-3 h-full min-h-0 overflow-hidden">
       {/* Tab Switcher */}
-      <div className="flex items-center bg-slate-900/90 border border-slate-800 rounded-lg p-0.5 gap-1 flex-shrink-0">
-        <button
-          type="button"
-          onClick={() => setActiveTab('all')}
-          className={`flex-1 py-1 text-xs font-sans font-medium rounded-md transition-colors ${
-            activeTab === 'all'
-              ? 'bg-slate-800 text-cyan-300 border border-cyan-500/30 shadow-sm'
-              : 'text-slate-400 hover:text-slate-200'
-          }`}
-        >
-          All Panels
-        </button>
+      <div className="hylex-controls-tabs flex items-center rounded-full p-1 gap-1 flex-shrink-0">
         <button
           type="button"
           onClick={() => setActiveTab('hardware')}
-          className={`flex-1 py-1 text-xs font-sans font-medium rounded-md transition-colors ${
+          className={`flex-1 py-2 text-[11px] font-medium rounded-full transition-all ${
             activeTab === 'hardware'
-              ? 'bg-slate-800 text-amber-300 border border-amber-500/30 shadow-sm'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-white/[.09] text-white shadow-sm'
+              : 'text-slate-400 hover:text-white'
           }`}
         >
-          Actuators
+          Controls
         </button>
         <button
           type="button"
           onClick={() => setActiveTab('roi')}
-          className={`flex-1 py-1 text-xs font-sans font-medium rounded-md transition-colors ${
+          className={`flex-1 py-2 text-[11px] font-medium rounded-full transition-all ${
             activeTab === 'roi'
-              ? 'bg-slate-800 text-emerald-300 border border-emerald-500/30 shadow-sm'
-              : 'text-slate-400 hover:text-slate-200'
+              ? 'bg-white/[.09] text-white shadow-sm'
+              : 'text-slate-400 hover:text-white'
           }`}
         >
-          B2B ROI
+          Project impact
         </button>
       </div>
 
       {/* Panels View */}
-      <div className="flex-1 min-h-0 overflow-y-auto space-y-2 pr-0.5" style={{ scrollbarWidth: 'thin' }}>
-        {(activeTab === 'all' || activeTab === 'hardware') && (
+      <div className="flex-1 min-h-0 overflow-y-auto space-y-3 pr-0.5" style={{ scrollbarWidth: 'thin' }}>
+        {activeTab === 'hardware' && (
           <HardwarePanel sendWsCommand={sendWsCommand} />
         )}
-        {(activeTab === 'all' || activeTab === 'roi') && (
+        {activeTab === 'roi' && (
           <ROICalculator />
         )}
       </div>

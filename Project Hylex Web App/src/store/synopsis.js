@@ -28,7 +28,7 @@ export const SYNOPSIS = {
   // Servo #4 (Brine Tank A Return) — opens to recirculate >500ppm back to Tank A
 
   // ── Process threshold ───────────────────────────────
-  tds_threshold_ppm: 500,           // Dubai potable/tap water benchmark
+  tds_threshold_ppm: 500,           // Prototype reuse target; not drinking-water certification
 
   // ── Industrial scaling factor ───────────────────────
   // Benchtop TDS × 82.35 ≈ industrial brine concentration equivalent

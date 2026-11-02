@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react';
-import { useHylex } from '../store/HylexContext';
+import { useHylex } from '../store/hooks';
 import {
   buildTelemetrySnapshot,
   SUGGESTED_QUERIES
 } from '../utils/copilotEngine.js';
 import { evaluateTdsPrediction } from '../utils/predictionEngine.js';
-import { evaluateElectrodeDiagnostics } from '../utils/diagnosticsEngine.js';
+import { evaluateTdsTrendDiagnostics } from '../utils/diagnosticsEngine.js';
 import {
   getOllamaConfig,
   setOllamaConfig,
@@ -36,18 +36,12 @@ const INITIAL_WELCOME_MESSAGE = {
   id: 'welcome-init',
   sender: 'assistant',
   timestamp: 0,
-  text: `### Project Hylex Local AI Co-Pilot Ready
+  text: `### Your Hylex co-pilot
 
-I am grounded in live telemetry from our **4-tier hybrid desalination tower**:
+Ask about system status, water quality, sensors, or routing. I use live ESP32 readings when they’re available.
 
-- **Stage 1 & 3 Dual-Tank Loop:** Monitoring base reservoir recirculation vs clean potable store routing.
-- **Stage 2 Membraneless Vortex:** Tracking centrifugal separation through the Archimedean triple-helix.
-- **Stage 3 Inline Sensor Suite:** Evaluating Gravity TDS conductivity and DS18B20 thermal compensation.
-- **Stage 4 Stepper Turret & Electro-Crystallization:** Observing 3-pod carousel indexing and mineral compaction.
-- **Autonomous Routing Gate:** Operating the **500 ppm Dubai potable tap water** threshold.
-
-Ask any question regarding system thermodynamics, salinity kinetics, electrode diagnostics, or B2B circular economics.`,
-  tags: ['LOCAL LLM', 'LIVE TELEMETRY'],
+**Prototype reuse target:** 500 ppm, when both probes are valid. TDS alone does not confirm water is safe to drink.`,
+  tags: ['LOCAL AI', 'LIVE DATA'],
 };
 
 const CHAT_STORAGE_KEY = 'hylex_copilot_chat_history';
@@ -79,7 +73,7 @@ export default function HylexCopilot({ targetTds = 500, onClose }) {
   }, [state.chartHistory, targetTds, state.tds]);
 
   const diagnostics = useMemo(() => {
-    return evaluateElectrodeDiagnostics(state);
+    return evaluateTdsTrendDiagnostics(state);
   }, [state]);
 
   const snapshot = useMemo(() => {
@@ -335,16 +329,16 @@ export default function HylexCopilot({ targetTds = 500, onClose }) {
   };
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/90 backdrop-blur-md flex flex-col h-full overflow-hidden shadow-xl">
+    <div className="hylex-panel rounded-[22px] flex flex-col h-full overflow-hidden shadow-xl">
       {/* Header */}
-      <div className="px-3.5 py-2.5 border-b border-slate-800/80 flex items-center justify-between flex-shrink-0 bg-slate-950/80">
+      <div className="px-4 py-3 border-b border-white/[.06] flex items-center justify-between flex-shrink-0 bg-slate-950/25">
         <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/25 text-cyan-400">
-            <Bot size={15} />
+          <div className="w-9 h-9 grid place-items-center rounded-xl bg-cyan-300/[.08] border border-cyan-200/10 text-cyan-200">
+            <Bot size={16} strokeWidth={1.8} />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-semibold text-slate-100 font-mono tracking-tight">HYLEX CO-PILOT</span>
+              <span className="text-xs font-semibold text-slate-100 tracking-[.1em]">HYLEX CO-PILOT</span>
               {/* Connection status badge */}
               {ollamaStatus.online ? (
                 <span className="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 text-emerald-300 font-mono">
@@ -532,18 +526,19 @@ export default function HylexCopilot({ targetTds = 500, onClose }) {
           <div className="grid grid-cols-2 gap-2 text-[11px]">
             <div className="bg-slate-900/60 p-2 rounded-lg border border-slate-800 space-y-0.5">
               <div className="text-[10px] text-slate-400 font-bold uppercase">Sensor Telemetry</div>
-              <div>TDS: <span className="text-cyan-300 font-semibold">{snapshot.sensors.tdsPpm.toFixed(1)} ppm</span></div>
-              <div>Temp: <span className="text-slate-200">{snapshot.sensors.tempC.toFixed(1)} °C</span></div>
-              <div>Compensated EC₂₅: <span className="text-slate-200">{snapshot.sensors.ec25CompensatedPpm} ppm</span></div>
-              <div>Industrial Scale: <span className="text-slate-200">{snapshot.sensors.industrialEquivalentPpm.toLocaleString()} ppm</span></div>
+              <div>TDS: <span className="text-cyan-300 font-semibold">{snapshot.sensors.tdsPpm?.toFixed(1) ?? '--'} ppm</span></div>
+              <div>Temp: <span className="text-slate-200">{snapshot.sensors.tempC?.toFixed(1) ?? '--'} °C</span></div>
+              <div>Probes: <span className="text-slate-200">TDS {snapshot.sensors.tdsValid ? 'OK' : 'CHECK'} · TEMP {snapshot.sensors.tempValid ? 'OK' : 'CHECK'}</span></div>
+              <div>82.35× model: <span className="text-slate-200">{snapshot.sensors.industrialEquivalentPpm?.toLocaleString() ?? '--'} ppm</span></div>
             </div>
 
             <div className="bg-slate-900/60 p-2 rounded-lg border border-slate-800 space-y-0.5">
               <div className="text-[10px] text-slate-400 font-bold uppercase">Actuation &amp; Routing</div>
-              <div>Gate Decision: <span className={snapshot.controls.routeClean ? 'text-emerald-400' : 'text-amber-400 font-semibold'}>{snapshot.controls.decision}</span></div>
+              <div>Gate Decision: <span className={snapshot.sensors.sensorsReady && snapshot.controls.routeClean ? 'text-emerald-400' : 'text-amber-400 font-semibold'}>{snapshot.controls.decision}</span></div>
               <div>12V Pump: <span className="text-slate-200">{snapshot.controls.pumpActive ? 'ON' : 'OFF'}</span></div>
-              <div>EC Relays: <span className="text-slate-200">Pod:{snapshot.controls.podEcActive ? 'ON' : 'OFF'} | Tank:{snapshot.controls.tankEcActive ? 'ON' : 'OFF'}</span></div>
-              <div>Carousel: <span className="text-slate-200">Pod #{snapshot.controls.activeCarouselSlot} ({snapshot.controls.podSaturationPct[snapshot.controls.activeCarouselSlot - 1]?.toFixed(0)}%)</span></div>
+              <div>Pod EC relay: <span className="text-slate-200">{snapshot.controls.podEcActive ? 'ON' : 'OFF'}</span> · Tank EC relay: <span className="text-slate-200">{snapshot.controls.tankEcActive ? 'ON' : 'OFF'}</span></div>
+              <div>Servo commands: <span className="text-slate-200">{snapshot.controls.servo1BackpressureDeg}° / {snapshot.controls.servo2ChuteDeg}° / {snapshot.controls.servo3CleanGateDeg}° / {snapshot.controls.servo4BrineGateDeg}°</span></div>
+              <div>Carousel: <span className="text-slate-200">Pod #{snapshot.controls.activeCarouselSlot} · {snapshot.controls.podRuntimeFillEstimatePct[snapshot.controls.activeCarouselSlot - 1]?.toFixed(0) ?? '--'}% runtime est.</span></div>
             </div>
           </div>
         </div>
@@ -606,7 +601,7 @@ export default function HylexCopilot({ targetTds = 500, onClose }) {
               {msg.sender === 'assistant' ? (
                 msg.text ? (
                   <>
-                    <MarkdownRenderer content={msg.text} />
+                    <MarkdownRenderer content={msg.id === 'welcome-init' ? INITIAL_WELCOME_MESSAGE.text : msg.text} />
                     {msg.isStreaming && (
                       <span className="inline-block w-1.5 h-3.5 bg-cyan-400 animate-pulse ml-0.5 align-middle" />
                     )}
@@ -643,19 +638,19 @@ export default function HylexCopilot({ targetTds = 500, onClose }) {
       </div>
 
       {/* Suggested Questions Chips */}
-      <div className="px-3 py-2 border-t border-slate-800 bg-slate-950/60 flex-shrink-0">
-        <div className="text-[10px] font-mono text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+      <div className="px-4 py-3 border-t border-white/[.06] bg-slate-950/25 flex-shrink-0">
+        <div className="text-[9px] font-semibold text-slate-500 uppercase tracking-[.14em] mb-2 flex items-center gap-1.5">
           <Sparkles size={10} className="text-cyan-400" />
           <span>Quick Inquiry Prompts</span>
         </div>
-        <div className="flex flex-wrap gap-1.5 max-h-20 overflow-y-auto">
-          {SUGGESTED_QUERIES.map((sq, idx) => (
+        <div className="flex gap-2 overflow-x-auto pb-0.5">
+          {SUGGESTED_QUERIES.slice(0, 3).map((sq, idx) => (
             <button
               key={idx}
               type="button"
               onClick={() => handleSendQuery(sq)}
               disabled={isStreaming}
-              className="text-[11px] font-sans px-2.5 py-1 rounded-md bg-slate-800/80 hover:bg-slate-700 hover:text-cyan-200 border border-slate-700/60 text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all text-left"
+              className="whitespace-nowrap text-[10px] font-medium px-3 py-2 rounded-full bg-white/[.035] hover:bg-white/[.07] hover:text-cyan-100 border border-white/[.06] text-slate-300 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
             >
               {sq}
             </button>
@@ -680,7 +675,7 @@ export default function HylexCopilot({ targetTds = 500, onClose }) {
             placeholder={
               isStreaming
                 ? 'Model is streaming response...'
-                : 'Ask about salinity kinetics, fouling status, Dubai 500 ppm standard...'
+                : 'Ask about TDS trends, routing logic, or sensor limits...'
             }
             className="w-full bg-slate-900 border border-slate-700 rounded-lg pl-3 pr-3 py-2 text-xs font-sans text-slate-100 placeholder-slate-500 focus:outline-none focus:border-cyan-500/80 disabled:opacity-50"
           />

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { HylexProvider } from './store/HylexContext';
 import ConnectionBar from './components/ConnectionBar';
 import KpiRibbon from './components/KpiRibbon';
@@ -10,13 +10,19 @@ import ElectrodeDiagnostics from './components/ElectrodeDiagnostics';
 import HylexCopilot from './components/HylexCopilot';
 import ProcessBanner from './components/ProcessBanner';
 import OllamaController from './components/OllamaController';
+const HylexModelViewer = lazy(() => import('./components/HylexModelViewer'));
 
 function MainApp() {
-  const [activeView, setActiveView] = useState('dashboard'); // 'dashboard' | 'ai'
+  const [activeView, setActiveView] = useState('dashboard'); // 'dashboard' | 'ai' | 'model'
   const [isCopilotOpen, setIsCopilotOpen] = useState(false);
+  const mainRef = useRef(null);
+
+  useEffect(() => {
+    mainRef.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [activeView]);
 
   return (
-    <div className="flex flex-col h-screen bg-slate-950 text-slate-100 overflow-hidden select-none">
+    <div className="hylex-app flex flex-col h-screen text-slate-100 overflow-hidden select-none">
       {/* Top Connection & Navigation Bar */}
       <ConnectionBar
         activeView={activeView}
@@ -26,47 +32,54 @@ function MainApp() {
       />
 
       {/* Main Workspace Layout */}
-      <main className="flex-1 flex flex-col gap-3 p-3.5 overflow-hidden min-h-0 relative">
-        {/* Universal Top KPI Ribbon */}
-        <KpiRibbon />
+      <main ref={mainRef} className="hylex-main flex-1 min-h-0 overflow-y-auto relative">
+        <div className="hylex-content mx-auto flex flex-col gap-5 px-3 py-5 sm:px-5 sm:py-6 xl:px-8 xl:py-7">
+        <div className="flex items-end justify-between gap-4 animate-rise-in">
+          <div>
+            <div className="hylex-eyebrow flex items-center gap-2"><span className="hylex-eyebrow-dot" /> PROJECT HYLEX <span className="text-slate-700">/</span> {activeView === 'dashboard' ? 'LIVE OPERATIONS' : activeView === 'ai' ? 'INTELLIGENCE' : 'JUDGE PRESENTATION'}</div>
+            <h1 className="mt-2 text-2xl sm:text-[30px] font-semibold tracking-[-0.04em] text-white">{activeView === 'dashboard' ? 'System overview' : activeView === 'ai' ? 'Insights & diagnostics' : 'Project model'}</h1>
+          </div>
+          <div className="hidden sm:flex items-center gap-2 text-xs text-slate-400 pb-1">
+            <span className="hylex-live-mark" />
+            Edge controller
+          </div>
+        </div>
+        {activeView !== 'model' && <>
+          {/* Universal Top KPI Ribbon */}
+          <KpiRibbon />
 
-        {/* 2-Stage Process Launcher Banner */}
-        <ProcessBanner />
+          {/* 2-Stage Process Launcher Banner */}
+          <ProcessBanner />
+        </>}
 
         {/* View 1: Digital Twin & Actuator Hardware Controls */}
         {activeView === 'dashboard' ? (
-          <div
-            className="flex-1 grid gap-3 min-h-0"
-            style={{ gridTemplateColumns: '1.05fr 1.35fr 0.95fr' }}
-          >
+          <div className="hylex-dashboard-grid grid grid-cols-1 md:grid-cols-[minmax(280px,.88fr)_minmax(340px,1.12fr)] 2xl:grid-cols-[minmax(310px,.92fr)_minmax(470px,1.28fr)_minmax(330px,.9fr)] gap-4 min-h-0">
             {/* Left Column: 4-Tier Digital Twin Tower Schematic */}
-            <div className="min-h-0 overflow-hidden">
+            <div className="hylex-twin-slot min-h-0 animate-rise-in" style={{ '--stagger': '80ms' }}>
               <DigitalTwin />
             </div>
 
             {/* Center Column: Salinity Telemetry & Thermal Kinetics Chart */}
-            <div className="min-h-0 overflow-hidden">
+            <div className="hylex-chart-slot min-h-0 animate-rise-in" style={{ '--stagger': '140ms' }}>
               <TelemetryChart />
             </div>
 
             {/* Right Column: Actuator Controls & B2B Circular Economy ROI */}
-            <div className="min-h-0 overflow-y-auto pr-0.5" style={{ scrollbarWidth: 'thin' }}>
+            <div className="hylex-controls-slot min-h-0 md:col-span-2 2xl:col-span-1 animate-rise-in" style={{ '--stagger': '200ms' }}>
               <ControlPanel />
               <OllamaController />
             </div>
           </div>
-        ) : (
+        ) : activeView === 'ai' ? (
           /* View 2: AI Intelligence Suite (Predictor | Diagnostics | Co-Pilot) */
-          <div
-            className="flex-1 grid gap-3 min-h-0"
-            style={{ gridTemplateColumns: '1.1fr 1fr 1.15fr' }}
-          >
+          <div className="hylex-ai-grid grid grid-cols-1 xl:grid-cols-3 gap-4 min-h-0">
             {/* Feature 1: Time-to-Target & Pass Predictor (OLS Kinetics) */}
             <div className="min-h-0 overflow-hidden">
               <PredictiveAnalytics />
             </div>
 
-            {/* Feature 2: Electrode Health & Fouling Diagnostics */}
+            {/* Feature 2: Live TDS Trend Diagnostics */}
             <div className="min-h-0 overflow-hidden">
               <ElectrodeDiagnostics />
             </div>
@@ -76,6 +89,10 @@ function MainApp() {
               <HylexCopilot />
             </div>
           </div>
+        ) : (
+          <Suspense fallback={<div className="hylex-model-loading-panel">Loading the interactive model…</div>}>
+            <HylexModelViewer />
+          </Suspense>
         )}
 
         {/* Slide-over Co-Pilot Drawer (Accessible when exploring Digital Twin) */}
@@ -92,6 +109,7 @@ function MainApp() {
             </aside>
           </>
         )}
+        </div>
       </main>
     </div>
   );

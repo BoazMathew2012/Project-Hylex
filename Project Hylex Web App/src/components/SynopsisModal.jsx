@@ -28,21 +28,21 @@ export default function SynopsisModal({ isOpen, onClose }) {
     {
       num: 'Stage 2',
       title: 'Membraneless Centrifugal Vortex Separation (Top Tier)',
-      desc: 'Pump injects brine upward through a 10mm brass splitter and dual 90° tangential brass nozzles into a Ø90mm clear acrylic cylinder housing a 3D-printed Archimedean Triple-Helix Spiral. Centrifugal & Dean-Vortex forces fling dense mineral clumps outward against the wall while clarified water remains in the central core, separated by a concentric bullseye splitter.',
+      desc: 'Pump injects brine upward through a 10 mm three-way Y-splitter and the Top Cap’s dual 15° angled inlet sockets into a Ø90 mm clear acrylic cylinder housing a 3D-printed Archimedean Triple-Helix Spiral. The intended vortex sends denser suspended flocs toward the outer wall while clarified flow remains in the central core, separated by a concentric bullseye splitter.',
       badge: 'Ø90mm Helix',
       badgeColor: 'border-cyan-500/30 text-cyan-300 bg-cyan-500/10',
     },
     {
       num: 'Stage 3',
-      title: 'Closed-Loop AI Sensor Verification & 2-Tank Routing (Middle Tier)',
-      desc: 'Clarified water flows into an inline Sensor Holding Chamber equipped with Gravity Analog TDS Sensor & DS18B20 waterproof thermal probe. ESP32 evaluates salinity in real time: ≤500 ppm routes to Tank B (Clean Store); >500 ppm pinches backpressure servo to 55° and recirculates back to Tank A.',
-      badge: '≤500 ppm Gate',
+      title: 'Sensor Check & 2-Tank Routing (Middle Tier)',
+      desc: 'The chamber uses a Gravity analog TDS probe and DS18B20 temperature probe. ESP32 normalizes TDS once to 25°C. When both probes are valid, readings ≤500 ppm route to Tank B; higher readings recirculate to Tank A. If either probe is invalid, firmware keeps the route on Tank A. The 500 ppm value is a prototype reuse target, not a safety certification.',
+      badge: '500 ppm reuse target',
       badgeColor: 'border-emerald-500/30 text-emerald-300 bg-emerald-500/10',
     },
     {
       num: 'Stage 4',
-      title: 'Robotic Carousel Indexing & Electro-Crystallization (Lower Tier)',
-      desc: 'Outer mineral slurry drops into a 3D-printed 3-slot rotating carousel. Central graphite rod (+12V anode) and 304 stainless steel mesh (-12V cathode) compact solid Magnesium Hydroxide (Mg(OH)₂) while venting green H₂ gas. 28BYJ-48 stepper motor indexes 120° every cycle with 3-second chute pinch cutoff.',
+      title: 'Robotic Carousel Indexing & Mineral Collection (Lower Tier)',
+      desc: 'Firmware closes the chute and indexes the three-slot carousel using the 28BYJ-48 stepper. Automatic indexing is triggered by elapsed runtime, not measured ion mass or pod fill. The current firmware has no carousel home sensor and assumes the carousel is aligned to Pod #1 at startup; pod-specific electrolysis is not separately switched by the two relay outputs.',
       badge: '3-Slot Stepper Turret',
       badgeColor: 'border-purple-500/30 text-purple-300 bg-purple-500/10',
     },
@@ -116,7 +116,7 @@ export default function SynopsisModal({ isOpen, onClose }) {
                 </div>
                 <div className="flex items-start gap-2.5">
                   <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold">6.4</span>
-                  <span className="text-xs text-slate-300 leading-relaxed">Substantially increase water-use efficiency via potable recovery (≤500 ppm Dubai standard).</span>
+                  <span className="text-xs text-slate-300 leading-relaxed">Increase water reuse with a ≤500 ppm prototype target; this reading is not drinking-water certification.</span>
                 </div>
                 <div className="flex items-start gap-2.5">
                   <span className="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-mono text-[10px] font-bold">6.a</span>
@@ -199,6 +199,13 @@ export default function SynopsisModal({ isOpen, onClose }) {
             </div>
           </div>
 
+          <div className="p-4 rounded-xl bg-amber-500/5 border border-amber-500/25">
+            <div className="text-amber-300 text-xs font-sans font-semibold mb-2">CURRENT FIRMWARE / MEASUREMENT BOUNDARIES</div>
+            <p className="text-[11px] text-slate-300 leading-relaxed">
+              Live telemetry covers TDS, temperature, four commanded servo angles, two relay outputs (pump and Tank A electro-coagulation), and a runtime-based carousel estimate. There is no servo position feedback, carousel home switch, pod load cell, tank-level or flow meter, pH probe, or electrode current/voltage measurement. Industrial treatment and mineral-yield figures below are design scenarios, not measurements from this prototype.
+            </p>
+          </div>
+
           {/* B2B Commercial Economics & ZLD Comparison */}
           <div className="p-4 rounded-xl bg-slate-950/60 border border-emerald-500/30">
             <div className="flex items-center gap-2 text-emerald-400 mb-3 font-sans text-xs font-semibold">
@@ -228,7 +235,7 @@ export default function SynopsisModal({ isOpen, onClose }) {
               </div>
             </div>
             <p className="text-xs text-slate-400 leading-relaxed font-sans">
-              Global desalination generates over 141.5 billion liters of toxic brine daily. Over 90% is dumped into marine environments, creating dead zones and hiking intake salinity by 15%–25%. Project Hylex eliminates membrane fouling, recovers potable water, and produces solid commodity-grade minerals with a fraction of the thermal energy required by conventional evaporators.
+              Global desalination generates large volumes of concentrated brine, much of which is discharged to the environment. Project Hylex targets reuse-grade water and mineral recovery with an electrochemical pre-treatment and vortex separation process. The current prototype’s TDS reading alone does not establish drinking-water safety or verify mineral purity.
             </p>
           </div>
 

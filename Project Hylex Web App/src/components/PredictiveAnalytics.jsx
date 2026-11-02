@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useHylex } from '../store/HylexContext';
+import { useHylex } from '../store/hooks';
 import { predictTimeToTarget, RELIABILITY_LEVEL, PREDICTION_STATUS } from '../utils/predictionEngine';
 import Clock from 'lucide-react/dist/esm/icons/clock.mjs';
 import Target from 'lucide-react/dist/esm/icons/target.mjs';
@@ -219,24 +219,24 @@ export default function PredictiveAnalytics() {
   const isFlat = prediction.status === PREDICTION_STATUS.NOT_PREDICTING_FLAT;
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/85 backdrop-blur-sm p-3.5 flex flex-col gap-3 h-full shadow-sm">
+    <div className="hylex-panel rounded-[22px] p-4 sm:p-5 flex flex-col gap-4 h-full shadow-sm overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between flex-shrink-0">
         <div className="flex items-center gap-2.5">
-          <div className="p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/25 text-cyan-400">
-            <Clock size={15} />
+          <div className="w-9 h-9 grid place-items-center rounded-xl bg-cyan-300/[.08] border border-cyan-200/10 text-cyan-200">
+            <Clock size={16} strokeWidth={1.8} />
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-sans font-semibold text-white tracking-wide">
-                Time-to-Target &amp; Pass Predictor
+              <span className="text-sm font-semibold text-white tracking-tight">
+                Target forecast
               </span>
               <span className={`text-[10px] px-2 py-0.5 rounded-full border font-mono ${reliabilityBadge}`}>
                 Reliability: {prediction.reliability}
               </span>
             </div>
-            <div className="text-[10px] text-slate-400 font-sans">
-              Ordinary least squares (OLS) linear kinetics over rolling 30s window
+            <div className="text-[10px] text-slate-500 mt-0.5">
+              Based on recent sensor trend
             </div>
           </div>
         </div>
@@ -259,7 +259,7 @@ export default function PredictiveAnalytics() {
             <button
               type="button"
               onClick={() => setTargetTds(500)}
-              title="Reset to 500 ppm Dubai standard"
+              title="Reset to the 500 ppm prototype reuse target"
               className="text-slate-400 hover:text-white transition-colors"
             >
               <RotateCcw size={11} />
@@ -269,18 +269,18 @@ export default function PredictiveAnalytics() {
       </div>
 
       {/* Main KPI Row */}
-      <div className="grid grid-cols-4 gap-2 flex-shrink-0">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 flex-shrink-0">
         {/* Card 1: Live TDS */}
         <div className="bg-slate-950/60 border border-slate-800 rounded-lg p-2.5 flex flex-col justify-between">
           <div className="text-[10px] font-sans text-slate-400 font-medium uppercase tracking-wider">Measured TDS</div>
           <div className="flex items-baseline gap-1.5 my-1">
             <span className="text-2xl font-bold font-mono text-cyan-300">
-              {state.tds.toFixed(1)}
+              {state.tdsValid ? state.tds.toFixed(1) : '--'}
             </span>
             <span className="text-xs font-mono text-slate-500">ppm</span>
           </div>
           <div className="text-[10px] font-sans text-slate-400">
-            Compensated: <span className="text-slate-200 font-mono">{state.tds > 0 && (1 + 0.02 * (state.tempC - 25)) > 0 ? (state.tds / (1 + 0.02 * (state.tempC - 25))).toFixed(1) : '0.0'} ppm</span>
+            ESP32 25°C correction: <span className="text-slate-200 font-mono">{state.tempValid ? 'active' : 'paused · fallback used'}</span>
           </div>
         </div>
 
@@ -347,12 +347,13 @@ export default function PredictiveAnalytics() {
       </div>
 
       {/* Transparent Limitation Footer */}
-      <div className="flex items-start gap-2 p-2.5 rounded-lg bg-slate-950/40 border border-slate-800 text-[10px] font-sans text-slate-400 flex-shrink-0">
-        <Info size={13} className="text-cyan-400 flex-shrink-0 mt-0.5" />
-        <span className="leading-relaxed">
-          <strong className="text-slate-300">Methodology Note:</strong> Prediction utilizes ordinary least squares (OLS) linear extrapolation across a rolling 30-second window (N ≥ 8). Pass count estimation is kept honest: because Project Hylex operates via continuous hydro-cyclone recirculation, discrete pass quantification requires volumetric flow totalizers.
-        </span>
-      </div>
+      <details className="group flex-shrink-0 rounded-xl border border-white/[.055] bg-slate-950/30 px-3 py-2.5 text-[10px] text-slate-400">
+        <summary className="cursor-pointer list-none flex items-center gap-2 font-medium text-slate-300">
+          <Info size={13} className="text-cyan-300" /> How this estimate works
+          <span className="ml-auto text-slate-600 transition-transform group-open:rotate-180">⌄</span>
+        </summary>
+        <p className="mt-2 pl-5 leading-relaxed">Uses a linear fit over the last 30 seconds (at least 8 samples). Pass counts are unavailable because the prototype has no flow meter.</p>
+      </details>
     </div>
   );
 }

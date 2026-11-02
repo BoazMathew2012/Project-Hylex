@@ -32,7 +32,9 @@ export function filterValidTelemetry(history, maxAgeMs = 90000) {
     valid.push({
       t,
       tds,
-      tempC: Number.isFinite(Number(pt.tempC)) ? Number(pt.tempC) : 25.0,
+      tempC: pt.tempC !== null && pt.tempC !== undefined && Number.isFinite(Number(pt.tempC))
+        ? Number(pt.tempC)
+        : null,
       industrial: Number.isFinite(Number(pt.industrial)) ? Number(pt.industrial) : Math.round(tds * 82.35),
     });
     lastTimestamp = t;

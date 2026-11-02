@@ -1,45 +1,50 @@
 /**
- * copilotEngine.js
- * 
- * Interactive engineering assistant and telemetry analyst for Project Hylex.
- * Produces deterministic, telemetry-grounded operational explanations,
- * diagnostic interpretations, and cautious advisory observations.
- * Works 100% locally with zero external API dependencies or costs.
+ * Local, telemetry-grounded explanations for the Hylex dashboard.
+ * Sensor and actuator fields describe the current prototype, not the proposed
+ * full-scale design. No electrode-health or water-safety diagnosis is inferred.
  */
 
 import { PREDICTION_STATUS } from './predictionEngine.js';
 import { DIAGNOSTIC_STATUS } from './diagnosticsEngine.js';
 
-/**
- * Builds a compact, structured snapshot of current application telemetry and analysis.
- */
 export function buildTelemetrySnapshot(state, prediction, diagnostics) {
   const now = Date.now();
-  const lastPoint = state.chartHistory?.[state.chartHistory.length - 1];
-  const lastTimestamp = lastPoint ? lastPoint.t : null;
-  const freshnessSec = lastTimestamp ? Math.max(0, (now - lastTimestamp) / 1000) : null;
-  const isStale = freshnessSec !== null && freshnessSec > 7;
+  const timestamp = state.telemetryAt ?? state.chartHistory?.at(-1)?.t ?? null;
+  const freshnessSec = timestamp === null ? null : Math.max(0, (now - timestamp) / 1000);
+  const sensorsReady = Boolean(state.tdsValid && state.tempValid);
+  const selectedTank = state.routeClean ? 'TANK B' : 'TANK A';
+  const decision = state.controlMode === 'manual'
+    ? state.relay1 ? `MANUAL ROUTE → ${selectedTank}` : `PUMP OFF · ${selectedTank} GATE SELECTED`
+    : !sensorsReady ? 'RECIRCULATE → TANK A (sensor check)'
+      : state.routeClean ? 'TANK B reuse route' : 'RECIRCULATE → TANK A';
 
   return {
     timestamp: now,
-    freshnessSec: freshnessSec !== null ? Number(freshnessSec.toFixed(1)) : null,
-    isStale,
+    freshnessSec: freshnessSec === null ? null : Number(freshnessSec.toFixed(1)),
+    isStale: freshnessSec !== null && freshnessSec > 7,
     connection: {
-      mode: state.mode, // 'live' | 'simulation'
+      mode: 'live',
       status: state.wsStatus,
       latencyMs: state.latencyMs,
       url: state.wsUrl,
     },
     sensors: {
-      tdsPpm: state.tds,
-      tempC: state.tempC,
-      ec25CompensatedPpm: state.tds > 0 && (1 + 0.02 * (state.tempC - 25)) > 0 ? Number((state.tds / (1 + 0.02 * (state.tempC - 25))).toFixed(1)) : 0,
-      industrialEquivalentPpm: Math.round(state.tds * 82.35),
+      tdsValid: Boolean(state.tdsValid),
+      tempValid: Boolean(state.tempValid),
+      sensorsReady,
+      // Firmware applies EC25 normalization before publishing this TDS value.
+      tdsPpm: state.tdsValid ? state.tds : null,
+      tds25NormalizationValid: sensorsReady,
+      tempC: state.tempValid ? state.tempC : null,
+      tdsAdcRaw: state.tdsAdcRaw,
+      tdsVoltageMv: state.tdsVoltageMv,
+      industrialEquivalentPpm: sensorsReady ? Math.round(state.tds * 82.35) : null,
     },
     controls: {
-      controlMode: state.controlMode, // 'auto' | 'manual'
-      decision: state.routeClean ? 'CLEAN -> TANK B' : 'RECIRCULATE -> TANK A',
-      routeClean: state.routeClean,
+      controlMode: state.controlMode,
+      routeClean: Boolean(state.routeClean),
+      decision,
+      servoAnglesAreCommands: true,
       servo1BackpressureDeg: state.servo1,
       servo2ChuteDeg: state.servo2,
       servo3CleanGateDeg: state.servo3,
@@ -48,7 +53,8 @@ export function buildTelemetrySnapshot(state, prediction, diagnostics) {
       podEcActive: Boolean(state.relay2),
       tankEcActive: Boolean(state.relay3),
       activeCarouselSlot: state.carouselSlot + 1,
-      podSaturationPct: state.podSaturation,
+      podRuntimeFillEstimatePct: state.podSaturation,
+      processState: state.processState,
     },
     prediction: {
       status: prediction?.status || PREDICTION_STATUS.INSUFFICIENT_DATA,
@@ -66,170 +72,90 @@ export function buildTelemetrySnapshot(state, prediction, diagnostics) {
       severity: diagnostics?.severity || 'info',
       message: diagnostics?.message || '',
       confidence: diagnostics?.confidence || 'Low',
-      observedRatePpmMin: diagnostics?.observedReductionRatePpmMin || 0,
-      baselineRatePpmMin: diagnostics?.baselineRatePpmMin || 18,
+      observedRatePpmMin: diagnostics?.observedReductionRatePpmMin ?? null,
     },
     uninstrumentedSensors: [
-      'Electrode Shunt Current (Amps)',
-      'Direct Voltage Drop (V)',
-      'Inline pH Sensor',
-      'Batch Volume Flow Totalizer',
+      'electrode current and cell voltage',
+      'inline pH',
+      'tank levels and flow volume',
+      'pod mass or mineral purity',
+      'servo position feedback',
     ],
   };
 }
 
-/**
- * Suggested questions operators and judges can ask the Co-Pilot.
- */
 export const SUGGESTED_QUERIES = [
   'Summarize current system status',
-  'Explain recent TDS trend and reduction rate',
-  'Why is the time-to-target reliable or unreliable?',
-  'What is the electrode fouling diagnostic status?',
-  'What are the limitations of the current sensor suite?',
-  'Explain the 500 ppm Dubai benchmark routing rule',
+  'Explain the recent TDS trend',
+  'How does the prototype route at 500 ppm?',
+  'Can this diagnose electrode fouling?',
+  'Which sensors does the prototype not have?',
 ];
 
-/**
- * Deterministically analyzes user query against the live telemetry snapshot.
- * Generates an authoritative, factual engineering response.
- * 
- * @param {string} query - Operator's question
- * @param {Object} snapshot - Telemetry snapshot from buildTelemetrySnapshot()
- */
 export function answerTelemetryQuery(query, snapshot) {
   const q = query.toLowerCase().trim();
   const { sensors, controls, prediction, diagnostics, connection, freshnessSec, isStale } = snapshot;
+  const connected = connection.status === 'connected';
+  const warning = !connected
+    ? '⚠️ Telemetry is offline; values may be cleared or out of date.\n\n'
+    : isStale ? `⚠️ Telemetry is stale (${freshnessSec}s since the last frame).\n\n` : '';
+  const tds = sensors.tdsValid
+    ? `${sensors.tdsPpm.toFixed(1)} ppm${sensors.tempValid ? ' (temperature-normalized)' : ' (using 25°C fallback; temp probe invalid)'}`
+    : 'unavailable (check TDS probe)';
+  const temp = sensors.tempValid ? `${sensors.tempC.toFixed(1)} °C` : 'unavailable (check DS18B20)';
+  const rate = prediction.reductionRatePpmMin;
+  const route = controls.decision;
 
-  // Stale or disconnected warning header
-  let connectivityNote = '';
-  if (connection.status !== 'connected' && connection.mode === 'live') {
-    connectivityNote = '⚠️ [TELEMETRY OFFLINE: WebSocket is disconnected. Readings reflect last buffered frame.]\n\n';
-  } else if (isStale) {
-    connectivityNote = `⚠️ [STALE DATA: Last telemetry packet arrived ${freshnessSec}s ago.]\n\n`;
+  if (/foul|electrode|cathode|anode|health|scal(e|ing)/.test(q)) {
+    return `${warning}**Electrode condition cannot be diagnosed from this prototype’s telemetry.**
+
+The dashboard reports the commanded Pod EC relay (${controls.podEcActive ? 'ON' : 'OFF'}) and Tank EC relay (${controls.tankEcActive ? 'ON' : 'OFF'}), plus the observed TDS trend (${diagnostics.observedRatePpmMin === null ? 'not available' : `${diagnostics.observedRatePpmMin.toFixed(1)} ppm/min`}). A TDS trend does not prove electrode fouling or treatment efficiency. The prototype has no cell-current, cell-voltage, or pH sensor. Inspect the electrodes directly and use suitable instruments to assess them.`;
   }
 
-  // 1. Electrode Health & Fouling Diagnostics (High Priority)
-  if (q.includes('electrode') || q.includes('fouling') || q.includes('health') || q.includes('scaling') || q.includes('cathode') || q.includes('anode')) {
-    return `${connectivityNote}**Electrode Health & Fouling Diagnostics:**
+  if (/predict|time|countdown|pass|reliab/.test(q)) {
+    return `${warning}**TDS trend projection:** ${prediction.predictedTimeFormatted} to the configured ${prediction.targetTds} ppm target; reliability ${prediction.reliability} (R² ${(prediction.rSquared * 100).toFixed(1)}%).
 
-• **Diagnostic Status:** **${diagnostics.statusLabel}** (Severity: ${diagnostics.severity.toUpperCase()})
-• **Treatment Trend:** **${diagnostics.treatmentTrend}**
-• **Diagnostic Confidence:** **${diagnostics.confidence}**
-• **Observed Reduction:** ${diagnostics.observedRatePpmMin.toFixed(1)} ppm/min (Nominal Baseline: ${diagnostics.baselineRatePpmMin} ppm/min)
-
-**Physical Interpretation:**
-${diagnostics.message}
-
-**Critical Hardware Transparency:**
-The ESP32 firmware monitors relay actuation and TDS rate-of-change, but **does not have electrical current shunt sensors (e.g. INA219/ACS712)** to directly measure electrode cell current (mA/cm²) or voltage drop. Therefore:
-1. Declining TDS reduction is treated as an *operational performance indicator*, not definitive proof of cathode scaling.
-2. If degradation persists, visually inspect Pod #${controls.activeCarouselSlot} graphite anode and 304 stainless steel woven cathode mesh for white mineral passivation crust before cleaning.`;
+This is a short-window trend estimate, not a validated process-performance result. A pass count cannot be measured because the prototype has no flow totalizer.`;
   }
 
-  // 2. Time-to-Target & Prediction Reliability
-  if (q.includes('predict') || q.includes('time') || q.includes('target') || q.includes('countdown') || q.includes('reliable') || q.includes('pass')) {
-    return `${connectivityNote}**Time-to-Target & Pass Predictor Breakdown:**
+  if (/limit|sensor|missing|hardware|uninstrumented/.test(q)) {
+    return `${warning}**Prototype instrumentation:** The ESP32 reads a Gravity analog TDS probe on GPIO 34 and a DS18B20 temperature probe on GPIO 4. It reports the averaged ADC count and millivolts, commanded servo angles, two relay states, and estimated carousel runtime load.
 
-• **Configured Target:** ${prediction.targetTds} ppm (Dubai potable tap water standard)
-• **Current Prediction:** **${prediction.predictedTimeFormatted}**
-• **Prediction Reliability:** **${prediction.reliability}** (Regression R²: ${(prediction.rSquared * 100).toFixed(1)}%)
-• **Pass Projection Status:** ${prediction.passEstimate}
-
-**Why this prediction is ${prediction.reliability.toLowerCase()}:**
-${prediction.reliability === 'High' ? 'The system has accumulated more than 15 valid timestamped readings with a stable linear downward trend (R² > 0.80) and low residual variance.' :
-  prediction.reliability === 'Moderate' ? 'A discernible reduction trend exists, but moderate sensor noise or fewer points (8–14 readings) limits extrapolation precision.' :
-  'Data points exhibit high variance, stagnant slope, or recent setpoint disturbance, preventing confident linear extrapolation.'}
-
-*Note on Passes: Project Hylex operates on continuous membraneless fluid flow through external cam-pinch valves. Predicting discrete passes requires batch volumetric flow totalizers, which are not currently instrumented in the hardware.*`;
+The current prototype does not report electrode current or cell voltage, pH, tank levels, flow volume, pod mass/purity, or servo position feedback. Those measurements are needed to substantiate efficiency, mineral yield, actual tank volume, and electrode condition.`;
   }
 
-  // 3. Limitations & Missing Instrumentation
-  if (q.includes('limit') || q.includes('sensor') || q.includes('missing') || q.includes('hardware') || q.includes('uninstrumented')) {
-    return `${connectivityNote}**Sensor Suite & Engineering Limitations:**
+  if (/500|target|threshold|route|valve|reuse/.test(q)) {
+    return `${warning}**Routing rule:** ${sensors.sensorsReady
+      ? `with valid TDS and temperature probes, the ESP32 routes readings at or below 500 ppm to Tank B; higher readings recirculate to Tank A. Current gate state: ${route}.`
+      : `the ESP32 keeps the water on the Tank A recirculation path because a required sensor is invalid. TDS: ${tds}; temperature: ${temp}.`}
 
-**Currently Instrumented Hardware Sensors:**
-1. **Gravity Analog TDS Conductivity Sensor** (GPIO 34) with 3rd-order polynomial voltage calibration.
-2. **DS18B20 Waterproof Stainless Thermal Probe** (GPIO 4) providing EC₂₅ temperature compensation.
-3. **4x MG995 Cam-Pinch Servos** with physical angle feedback (GPIO 13, 12, 14, 27).
-4. **4-Channel 5V Optocoupler Relays** for 12V pump, pod EC, and tank EC.
-
-**Uninstrumented Hardware (Honest Diagnostic Boundaries):**
-• **Electrode Current Sensing:** No ammeter/current shunt installed; electrochemical efficiency cannot be stated as a direct percentage.
-• **Cell Voltage Feedback:** Real-time cell impedance cannot be isolated from fluid resistance.
-• **Batch Flow Totalizer:** System recirculates continuously; discrete "pass counts" are estimated by time rather than discrete volume.
-• **Inline pH Probe:** Alkaline catalyst shift ($NaHCO_3$) is pre-calibrated, not continuously monitored via ion-selective electrode.`;
+The 500 ppm value is this prototype’s reuse target. TDS alone does not certify drinking-water safety or regulatory compliance.`;
   }
 
-  // 4. Dubai 500 ppm Benchmark & Routing Rule
-  if (q.includes('dubai') || q.includes('500') || q.includes('benchmark') || q.includes('rule') || q.includes('valve')) {
-    return `${connectivityNote}**Autonomous Decision Gate & 500 ppm Dubai Benchmark:**
+  if (/trend|reduction|rate|tds|salinity|kinetic/.test(q)) {
+    const trend = prediction.status === PREDICTION_STATUS.INSUFFICIENT_DATA
+      ? 'There are not enough recent valid samples for a trend estimate.'
+      : `The recent fitted TDS slope is ${rate.toFixed(1)} ppm/min (R² ${(prediction.rSquared * 100).toFixed(1)}%). This describes the observed signal; it does not establish which treatment mechanism caused the change.`;
+    return `${warning}**Current TDS:** ${tds}. **Water temperature:** ${temp}.
 
-• **Potable Standard:** Dubai (DEWA) and WHO drinking water guidelines set tap water total dissolved solids (TDS) at **≤ 500 ppm**.
-• **Closed-Loop Rule in ESP32 Firmware:**
-  - **If EC₂₅ ≤ 500 ppm (Clean Potable):**
-    - AI Status switches to **EMERALD (CLEAN)**.
-    - Servo #1 (Backpressure) relaxes to **20°**.
-    - Servo #3 (Clean Gate) opens to **0° / 15°**, discharging into **Tank B (Clean Store)**.
-    - Servo #4 (Brine Return) closes to **85° / 90°**.
-  - **If EC₂₅ > 500 ppm (High Salinity):**
-    - AI Status switches to **AMBER/RED (RECIRCULATE)**.
-    - Servo #1 pinches to **55°–70°** to boost centrifugal vortex residence time.
-    - Servo #3 closes to **85° / 90°**.
-    - Servo #4 opens to **0° / 15°**, recirculating water back to **Tank A (Base Reservoir)** for further electro-coagulation.`;
+${trend}
+
+The ESP32 applies its 25°C normalization once when the DS18B20 is valid; with an invalid temperature probe it uses a 25°C fallback and locks automatic routing. The dashboard does not apply a second correction.`;
   }
 
-  // 5. TDS Trend & Reduction Rate
-  if (q.includes('trend') || q.includes('reduction') || q.includes('rate') || q.includes('tds') || q.includes('salinity') || q.includes('kinetics')) {
-    const rate = prediction.reductionRatePpmMin;
-    let interpretation = '';
+  if (/summary|status|overview|state/.test(q)) {
+    return `${warning}**Project Hylex status**
 
-    if (prediction.status === PREDICTION_STATUS.TARGET_MET) {
-      interpretation = `The fluid currently satisfies the configured target (${sensors.tdsPpm.toFixed(1)} ppm <= ${prediction.targetTds} ppm). The AI decision gate has directed the cam-pinch valve to Clean Storage (Tank B).`;
-    } else if (rate < -1) {
-      interpretation = `TDS is decreasing at **${Math.abs(rate).toFixed(1)} ppm/min** over the observed window. Hydro-cyclone separation and electro-coagulation flocs are actively removing dissolved solids from the clarified core.`;
-    } else if (rate > 1) {
-      interpretation = `TDS is currently rising at **+${rate.toFixed(1)} ppm/min**. This typically occurs during raw brine injection, initial fluid displacement, or when recirculation draws from a high-salinity sediment layer.`;
-    } else {
-      interpretation = `TDS reduction is currently negligible (**${rate.toFixed(1)} ppm/min**). The fluid salinity has stabilized or the circulation rate is insufficient to produce vortex shear.`;
-    }
-
-    return `${connectivityNote}**TDS Trend & Kinetics Analysis:**
-
-• **Current Reading:** ${sensors.tdsPpm.toFixed(1)} ppm (Industrial equivalent: ${sensors.industrialEquivalentPpm.toLocaleString()} ppm)
-• **Observed Reduction Rate:** ${rate.toFixed(1)} ppm/min (${(rate / 60).toFixed(2)} ppm/sec)
-• **Statistical Fit (R²):** ${(prediction.rSquared * 100).toFixed(1)}% variance explained over the rolling regression window.
-• **Assessment:** ${interpretation}
-• **Physical Evidence:** DS18B20 temperature compensation accounts for ${(Math.abs(sensors.tdsPpm - sensors.ec25CompensatedPpm) / sensors.tdsPpm * 100).toFixed(1)}% thermal drift correction.`;
+- TDS: ${tds}; temperature: ${temp}.
+- Process state: ${controls.processState}; pump relay: ${controls.pumpActive ? 'ON' : 'OFF'}.
+- Pod EC relay: ${controls.podEcActive ? 'ON' : 'OFF'}; Tank EC relay: ${controls.tankEcActive ? 'ON' : 'OFF'}.
+- Routing: ${route}.
+- Servo values are commanded angles, not measured position feedback.
+- Carousel: pod #${controls.activeCarouselSlot}; runtime-based fill estimate ${controls.podRuntimeFillEstimatePct[controls.activeCarouselSlot - 1]?.toFixed(0) ?? '--'}%.
+- Trend projection: ${prediction.predictedTimeFormatted} (${prediction.reliability} reliability).`;
   }
 
-  // 6. System Summary Query (Fallback for broad overview inquiries)
-  if (q.includes('summary') || q.includes('status') || q.includes('overview') || q.includes('state')) {
-    return `${connectivityNote}**Project Hylex System Status Summary:**
+  return `${warning}**Hylex telemetry summary:** TDS ${tds}; temperature ${temp}; routing ${route}; observed trend ${rate.toFixed(1)} ppm/min.
 
-• **Salinity Telemetry:** Measured TDS is **${sensors.tdsPpm.toFixed(1)} ppm** (Thermal-compensated EC₂₅: **${sensors.ec25CompensatedPpm} ppm** at ${sensors.tempC.toFixed(1)}°C).
-• **Routing Decision:** **${controls.decision}** (Servo #3: ${controls.servo3CleanGateDeg}°, Servo #4: ${controls.servo4BrineGateDeg}°). Threshold target is **${prediction.targetTds} ppm** (Dubai potable standard).
-• **Active Actuators:** 12V Pump: **${controls.pumpActive ? 'ON' : 'OFF'}**, Pod Electrolysis (+12V): **${controls.podEcActive ? 'ON' : 'OFF'}**, Tank Pre-EC: **${controls.tankEcActive ? 'ON' : 'OFF'}**.
-• **Mineral Carousel:** Active at **Pod #${controls.activeCarouselSlot}** (${controls.podSaturationPct[controls.activeCarouselSlot - 1]?.toFixed(0)}% saturation).
-• **Prediction & Diagnostics:** Time to target is **${prediction.predictedTimeFormatted}** (Reliability: ${prediction.reliability}). Electrode status: **${diagnostics.treatmentTrend}** (Confidence: ${diagnostics.confidence}).`;
-  }
-
-  // 7. General Fallback with Contextual Reasoning
-  return `${connectivityNote}**Hylex Engineering Co-Pilot Observation:**
-
-Regarding your query: "${query}"
-
-• **Current Measured Salinity:** ${sensors.tdsPpm.toFixed(1)} ppm (Compensated: ${sensors.ec25CompensatedPpm} ppm)
-• **Target Setpoint:** ${prediction.targetTds} ppm (${sensors.tdsPpm <= prediction.targetTds ? 'Currently Achieved' : `${(sensors.tdsPpm - prediction.targetTds).toFixed(1)} ppm remaining`})
-• **Observed Rate:** ${prediction.reductionRatePpmMin.toFixed(1)} ppm/min
-• **Active Routing:** ${controls.decision}
-• **Diagnostic State:** ${diagnostics.statusLabel}
-
-*Advisory Note: All recommendations provided by the Co-Pilot are strictly advisory and read-only. The system does not autonomously override hardware actuators without operator confirmation.*
-
-You can also ask about:
-- "Summarize current system status"
-- "Explain recent TDS trend"
-- "What is the electrode fouling diagnostic status?"
-- "What are the limitations of the current sensor suite?"`;
+The web assistant is read-only. The optional local Ollama controller is a separate feature that can send backpressure commands when enabled and active.`;
 }

@@ -21,11 +21,163 @@
   --color-slate-700: #334155;
 }
 
-/* Custom crisp scrollbar */
-::-webkit-scrollbar { width: 5px; height: 5px; }
-::-webkit-scrollbar-track { background: #020617; }
-::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #334155; }
+/* HYLEX command-center visual system */
+::-webkit-scrollbar { width: 7px; height: 7px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #263247; border-radius: 99px; border: 2px solid #070b14; }
+::-webkit-scrollbar-thumb:hover { background: #3b4d67; }
+
+.hylex-app {
+  --surface: rgba(13, 20, 34, .82);
+  --surface-edge: rgba(160, 180, 215, .10);
+  background:
+    radial-gradient(ellipse at 17% -16%, rgba(20, 139, 164, .17), transparent 39%),
+    radial-gradient(ellipse at 95% 12%, rgba(64, 83, 163, .12), transparent 32%),
+    #070b14;
+}
+.hylex-main {
+  background-image:
+    linear-gradient(rgba(119, 147, 184, .022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(119, 147, 184, .022) 1px, transparent 1px);
+  background-size: 36px 36px;
+  scrollbar-gutter: stable;
+}
+.hylex-content { width: min(100%, 1880px); }
+.hylex-header {
+  border-bottom: 1px solid rgba(160, 180, 215, .10);
+  background: rgba(7, 11, 20, .82);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, .18);
+  backdrop-filter: blur(22px) saturate(135%);
+}
+.hylex-brand-mark {
+  width: 40px;
+  height: 40px;
+  border: 1px solid rgba(93, 214, 230, .23);
+  background: linear-gradient(145deg, rgba(43, 192, 210, .18), rgba(43, 192, 210, .035));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .08), 0 5px 20px rgba(23, 175, 196, .08);
+}
+.hylex-nav {
+  border: 1px solid rgba(160, 180, 215, .09);
+  background: rgba(255, 255, 255, .025);
+}
+.hylex-nav-active {
+  border: 1px solid rgba(134, 197, 218, .12);
+  background: linear-gradient(180deg, rgba(70, 100, 126, .28), rgba(35, 51, 71, .35));
+}
+.hylex-secondary-button, .hylex-tool-button {
+  border: 1px solid rgba(160, 180, 215, .08);
+  background: rgba(255, 255, 255, .035);
+}
+.hylex-secondary-button:hover, .hylex-tool-button:hover {
+  border-color: rgba(160, 210, 225, .2);
+  background: rgba(255, 255, 255, .075);
+  transform: translateY(-1px);
+}
+.hylex-status-chip {
+  box-shadow: inset 0 1px rgba(255, 255, 255, .045);
+  white-space: nowrap;
+}
+.hylex-status-dot, .hylex-live-mark, .hylex-eyebrow-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.hylex-status-dot { box-shadow: 0 0 11px currentColor; }
+.hylex-live-mark { background: #74e2b0; box-shadow: 0 0 12px rgba(116, 226, 176, .75); animation: live-breathe 2.3s ease-in-out infinite; }
+.hylex-eyebrow { font-size: 10px; font-weight: 650; letter-spacing: .16em; color: #8292aa; }
+.hylex-eyebrow-dot { background: #69d6df; box-shadow: 0 0 12px rgba(105, 214, 223, .7); }
+
+.hylex-panel {
+  position: relative;
+  border: 1px solid var(--surface-edge);
+  background: linear-gradient(155deg, rgba(17, 26, 43, .94), var(--surface) 62%, rgba(12, 19, 33, .94));
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .18), inset 0 1px rgba(255, 255, 255, .035);
+  backdrop-filter: blur(16px);
+}
+.hylex-metric {
+  isolation: isolate;
+  transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+}
+.hylex-metric::before {
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 0;
+  width: 2px;
+  content: '';
+  background: linear-gradient(180deg, transparent, rgba(103, 218, 222, .52), transparent);
+  opacity: .45;
+}
+.hylex-metric::after {
+  position: absolute;
+  z-index: -1;
+  right: -36px;
+  bottom: -68px;
+  width: 150px;
+  height: 140px;
+  border-radius: 50%;
+  content: '';
+  background: radial-gradient(circle, rgba(65, 193, 210, .08), transparent 70%);
+  transition: transform .35s ease;
+}
+.hylex-metric:hover { transform: translateY(-2px); border-color: rgba(125, 190, 210, .2); box-shadow: 0 22px 55px rgba(0, 0, 0, .28), inset 0 1px rgba(255, 255, 255, .045); }
+.hylex-metric:hover::after { transform: scale(1.2); }
+.hylex-process-banner { box-shadow: 0 13px 36px rgba(0, 0, 0, .17), inset 0 1px rgba(255, 255, 255, .035); }
+.hylex-controls-tabs {
+  border: 1px solid rgba(160, 180, 215, .085);
+  background: rgba(7, 11, 20, .58);
+}
+.hylex-start-button {
+  background: linear-gradient(135deg, #a7f3d0, #68dbba 55%, #45cbaa);
+  box-shadow: 0 6px 22px rgba(72, 211, 169, .15), inset 0 1px rgba(255, 255, 255, .55);
+}
+.hylex-start-button:hover { transform: translateY(-1px); filter: brightness(1.06); box-shadow: 0 9px 28px rgba(72, 211, 169, .24), inset 0 1px rgba(255, 255, 255, .6); }
+.hylex-stop-button { border: 1px solid rgba(248, 113, 113, .13); background: rgba(248, 113, 113, .06); color: #fca5a5; }
+.hylex-stop-button:hover { background: rgba(248, 113, 113, .12); border-color: rgba(248, 113, 113, .24); }
+.hylex-carousel-button:not(:disabled) {
+  background: linear-gradient(110deg, rgba(251, 191, 36, .12), rgba(245, 158, 11, .055));
+  box-shadow: inset 0 1px rgba(255, 255, 255, .045);
+}
+.hylex-carousel-button:not(:disabled):hover { transform: translateY(-1px); border-color: rgba(252, 211, 77, .28); background: linear-gradient(110deg, rgba(251, 191, 36, .18), rgba(245, 158, 11, .08)); }
+button:focus-visible, input[type="range"]:focus-visible { outline: 2px solid rgba(103, 218, 222, .8); outline-offset: 3px; }
+.hylex-twin-slot, .hylex-chart-slot { min-height: 590px; }
+.hylex-controls-slot { min-height: 590px; display: flex; flex-direction: column; gap: 12px; }
+.hylex-controls-slot > :first-child { flex: 1 1 auto; }
+.hylex-ai-grid > * { min-height: 560px; }
+
+@keyframes live-breathe { 50% { opacity: .55; box-shadow: 0 0 5px rgba(116, 226, 176, .45); } }
+@keyframes rise-in { from { opacity: 0; transform: translateY(9px); } to { opacity: 1; transform: translateY(0); } }
+.animate-rise-in { animation: rise-in .55s cubic-bezier(.2,.72,.2,1) both; animation-delay: var(--stagger, 0ms); }
+
+@media (max-width: 1023px) {
+  .hylex-controls-slot { grid-column: 1 / -1; }
+}
+@media (max-width: 640px) {
+  .hylex-header { gap: 10px; }
+  .hylex-header > div:first-child { width: 100%; flex-wrap: wrap; justify-content: space-between; }
+  .hylex-header > div:first-child > div:first-child { gap: 8px; }
+  .hylex-header .hylex-nav { width: 100%; justify-content: space-between; }
+  .hylex-header > div:nth-child(2) { order: 3; }
+  .hylex-header > div:nth-child(3) { margin-left: auto; }
+  .hylex-twin-slot, .hylex-chart-slot { min-height: 500px; }
+  .hylex-controls-slot { min-height: 570px; }
+}
+@media (min-width: 2560px) {
+  html { font-size: 18px; }
+  .hylex-content { width: min(calc(100% - 112px), 2780px); }
+  .hylex-header { padding-inline: 48px; }
+  .hylex-twin-slot, .hylex-chart-slot, .hylex-controls-slot {
+    min-height: min(70vh, 880px);
+  }
+  .hylex-app [class~="text-[9px]"] { font-size: 12px; }
+  .hylex-app [class~="text-[10px]"] { font-size: 13px; }
+  .hylex-app [class~="text-[11px]"] { font-size: 14px; }
+  .hylex-app [class~="text-[12px]"] { font-size: 15px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
 
 /* Subtle indicator accents without blinding neon glow */
 .glow-cyan    { text-shadow: 0 0 12px rgba(34, 211, 238, 0.25); }
@@ -45,6 +197,49 @@
   to   { stroke-dashoffset: 0; }
 }
 .flow-line { animation: flow-dash 1s linear infinite; }
+
+/* Judge-facing product model */
+.hylex-model-page { display: flex; flex-direction: column; gap: 20px; min-height: min(690px, calc(100vh - 180px)); }
+.hylex-model-loading-panel { min-height: 460px; display: grid; place-items: center; border: 1px solid rgba(160, 180, 215, .10); border-radius: 18px; background: rgba(13, 20, 34, .82); color: #97a8bc; font-size: 12px; }
+.hylex-model-intro { display: flex; align-items: end; justify-content: space-between; gap: 18px; }
+.hylex-model-intro h2 { margin: 9px 0 4px; color: #f7fbff; font-size: clamp(24px, 3vw, 34px); font-weight: 620; letter-spacing: -.045em; }
+.hylex-model-intro p { margin: 0; color: #8c9aaf; font-size: 13px; }
+.hylex-model-download { display: inline-flex; align-items: center; gap: 8px; padding: 10px 13px; border: 1px solid rgba(133, 198, 211, .16); border-radius: 12px; background: rgba(16, 28, 42, .75); color: #c9d9e6; font-size: 11px; font-weight: 600; text-decoration: none; transition: .2s ease; white-space: nowrap; }
+.hylex-model-download:hover { border-color: rgba(105, 214, 223, .42); background: rgba(27, 54, 68, .8); color: white; transform: translateY(-1px); }
+.hylex-model-layout { display: grid; grid-template-columns: minmax(220px, .29fr) minmax(0, 1fr); gap: 14px; flex: 1; min-height: 530px; }
+.hylex-model-details, .hylex-model-stage { position: relative; overflow: hidden; border: 1px solid rgba(160, 180, 215, .10); border-radius: 18px; background: linear-gradient(155deg, rgba(17, 26, 43, .94), rgba(11, 18, 31, .96)); box-shadow: 0 18px 50px rgba(0, 0, 0, .18), inset 0 1px rgba(255, 255, 255, .035); }
+.hylex-model-details { display: flex; flex-direction: column; padding: 22px 18px 16px; }
+.hylex-model-detail-label { color: #71839a; font-size: 9px; font-weight: 700; letter-spacing: .16em; }
+.hylex-model-detail-copy { margin: 12px 0 24px; max-width: 260px; color: #bdc9d8; font-size: 13px; line-height: 1.65; }
+.hylex-model-feature { display: flex; align-items: center; gap: 11px; padding: 13px 0; border-top: 1px solid rgba(160, 180, 215, .075); }
+.hylex-model-feature-icon { display: grid; width: 34px; height: 34px; flex: 0 0 34px; place-items: center; border: 1px solid rgba(99, 205, 215, .12); border-radius: 11px; background: linear-gradient(145deg, rgba(51, 164, 177, .14), rgba(40, 81, 111, .12)); color: #80d7df; }
+.hylex-model-feature strong, .hylex-model-feature span { display: block; }
+.hylex-model-feature strong { color: #e8eff7; font-size: 11px; font-weight: 620; }
+.hylex-model-feature div > span { margin-top: 4px; color: #8190a4; font-size: 10px; }
+.hylex-model-instruction { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: 18px; color: #8093a9; font-size: 10px; }
+.hylex-model-instruction svg { color: #6fd2dc; }
+.hylex-model-ready { display: flex; align-items: center; gap: 8px; padding-top: 12px; color: #77889c; font-size: 9px; }
+.hylex-model-ready-dot, .hylex-model-stage-dot { width: 6px; height: 6px; flex: 0 0 6px; border-radius: 50%; background: #e7b863; box-shadow: 0 0 8px currentColor; }
+.hylex-model-ready-dot.is-ready, .hylex-model-stage-dot { background: #69d6a7; color: #69d6a7; }
+.hylex-model-stage { min-height: 530px; background: radial-gradient(ellipse at 54% 47%, rgba(27, 81, 99, .16), transparent 52%), #0b1321; }
+.hylex-model-stage::before { position: absolute; inset: 0; z-index: 0; pointer-events: none; content: ''; background: linear-gradient(rgba(119, 147, 184, .025) 1px, transparent 1px), linear-gradient(90deg, rgba(119, 147, 184, .025) 1px, transparent 1px); background-size: 32px 32px; mask-image: linear-gradient(transparent, black 18%, black 82%, transparent); }
+.hylex-model-stage-topline { position: absolute; z-index: 2; top: 17px; right: 19px; left: 19px; display: flex; align-items: center; justify-content: space-between; color: #718198; font-family: var(--font-mono); font-size: 9px; letter-spacing: .1em; pointer-events: none; }
+.hylex-model-stage-topline > span:first-child { display: inline-flex; align-items: center; gap: 8px; color: #b4c4d5; }
+.hylex-model-canvas { position: absolute; inset: 0; z-index: 1; }
+.hylex-model-canvas canvas { display: block; width: 100%; height: 100%; outline: none; }
+.hylex-model-loading { position: absolute; z-index: 1; top: 50%; left: 50%; display: flex; align-items: center; gap: 10px; color: #97a8bc; font-size: 12px; transform: translate(-50%, -50%); pointer-events: none; }
+.hylex-model-loading svg { color: #6fd2dc; }
+.hylex-model-toolbar { position: absolute; z-index: 3; right: 16px; bottom: 15px; left: 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; pointer-events: none; }
+.hylex-model-angles, .hylex-model-actions { display: flex; align-items: center; gap: 3px; padding: 4px; border: 1px solid rgba(172, 196, 220, .11); border-radius: 12px; background: rgba(7, 13, 23, .76); backdrop-filter: blur(16px); pointer-events: auto; }
+.hylex-model-angles button, .hylex-model-actions button { display: inline-grid; min-width: 34px; height: 31px; place-items: center; border: 1px solid transparent; border-radius: 8px; background: transparent; color: #8999ad; cursor: pointer; transition: .18s ease; }
+.hylex-model-angles button { padding: 0 10px; font-size: 10px; }
+.hylex-model-angles button:hover, .hylex-model-actions button:hover { color: white; background: rgba(255, 255, 255, .06); }
+.hylex-model-angles button.is-active, .hylex-model-actions button.is-active { border-color: rgba(105, 214, 223, .16); background: linear-gradient(180deg, rgba(70, 100, 126, .32), rgba(35, 51, 71, .4)); color: #d7f7f8; }
+.hylex-model-scale { position: absolute; z-index: 2; right: 20px; bottom: 27px; color: #60738a; font-family: var(--font-mono); font-size: 8px; letter-spacing: .12em; pointer-events: none; }
+.hylex-model-stage.is-fullscreen { position: fixed; z-index: 80; inset: 0; min-height: 100vh; border: 0; border-radius: 0; }
+.hylex-model-stage.is-fullscreen .hylex-model-toolbar { bottom: 26px; }
+@media (max-width: 900px) { .hylex-model-layout { grid-template-columns: 1fr; } .hylex-model-details { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; padding: 18px; } .hylex-model-detail-label, .hylex-model-detail-copy { grid-column: 1 / -1; } .hylex-model-detail-copy { margin: 8px 0 12px; } .hylex-model-feature { padding: 9px 0; } .hylex-model-instruction, .hylex-model-ready { margin-top: 6px; padding-top: 10px; } .hylex-model-stage { min-height: 520px; } }
+@media (max-width: 560px) { .hylex-model-page { min-height: 0; } .hylex-model-intro { align-items: start; flex-direction: column; } .hylex-model-layout { min-height: 0; } .hylex-model-details { grid-template-columns: 1fr; } .hylex-model-feature { padding: 10px 0; } .hylex-model-stage { min-height: 420px; } .hylex-model-stage-topline { top: 14px; right: 12px; left: 12px; font-size: 8px; } .hylex-model-toolbar { right: 9px; bottom: 10px; left: 9px; } .hylex-model-angles button { min-width: 30px; padding: 0 7px; font-size: 9px; } .hylex-model-scale { display: none; } }
 
 @keyframes spin-slow { to { transform: rotate(360deg); } }
 .spin-slow { animation: spin-slow 6s linear infinite; }

@@ -1,16 +1,14 @@
-# React + Vite
+# Project Hylex web dashboard
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+## Run locally
 
-Currently, two official plugins are available:
+Open Terminal and run:
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```sh
+cd "/Users/boazmathew/Desktop/GEMS Global Innovation Challenge/Project Hylex Web App"
+npm run dev
+```
 
-## React Compiler
+Open <http://127.0.0.1:5173/> in Safari and keep that Terminal window open while using the dashboard. Press `Control+C` in Terminal to stop the server.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+This command serves the latest built dashboard. After changing the source code, run `npm run build` and refresh Safari. If port 5173 is already occupied, stop the other server using it and run `npm run dev` again.

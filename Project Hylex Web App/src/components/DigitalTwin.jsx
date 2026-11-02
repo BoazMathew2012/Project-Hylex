@@ -1,8 +1,10 @@
-import { useHylex } from '../store/HylexContext';
+import { useHylex } from '../store/hooks';
+import Workflow from 'lucide-react/dist/esm/icons/workflow.mjs';
 
 // Servo arc dial
 function ServoArc({ cx, cy, r, angle, color, label }) {
-  const clampedAngle = Math.max(0, Math.min(180, angle));
+  const displayAngle = Number.isFinite(angle) ? angle : null;
+  const clampedAngle = Math.max(0, Math.min(180, displayAngle ?? 0));
   const startRad = -Math.PI / 2;
   const endRad = startRad + (clampedAngle / 180) * Math.PI;
   const x1 = cx + r * Math.cos(startRad);
@@ -29,23 +31,25 @@ function ServoArc({ cx, cy, r, angle, color, label }) {
       <circle cx={cx} cy={cy} r="2" fill={color} />
       {/* Labels */}
       <text x={cx} y={cy + r + 10} textAnchor="middle" fontSize="7.5" fill="#94a3b8" fontFamily="JetBrains Mono">{label}</text>
-      <text x={cx} y={cy + r + 20} textAnchor="middle" fontSize="8.5" fill={color} fontFamily="JetBrains Mono" fontWeight="600">{angle}°</text>
+      <text x={cx} y={cy + r + 20} textAnchor="middle" fontSize="8.5" fill={color} fontFamily="JetBrains Mono" fontWeight="600">{displayAngle === null ? '--' : `${displayAngle}°`}</text>
     </g>
   );
 }
 
-// Pod circle with saturation ring
-function PodCircle({ cx, cy, r, saturation, slot, currentSlot, label }) {
+// Pod circle with a runtime-based fill estimate ring (not a mass measurement).
+function PodCircle({ cx, cy, r, runtimeFillPct, slot, currentSlot, label }) {
   const isActive = slot === currentSlot;
-  const podColor = saturation > 80 ? '#f87171' : saturation > 50 ? '#fbbf24' : '#34d399';
-  const circumference = 2 * Math.PI * r;
-  const dashOffset = circumference * (1 - saturation / 100);
+  const podColor = isActive ? '#fbbf24' : '#64748b';
+  const circumference = 2 * Math.PI * (r - 3);
+  const hasEstimate = Number.isFinite(runtimeFillPct);
+  const boundedFill = Math.max(0, Math.min(100, runtimeFillPct ?? 0));
+  const dashOffset = circumference * (1 - boundedFill / 100);
 
   return (
     <g>
       <circle cx={cx} cy={cy} r={r} fill="#091325" stroke={isActive ? podColor : '#334155'} strokeWidth={isActive ? 1.8 : 1} />
-      {/* Saturation ring */}
-      <circle
+      {/* Estimated fill ring */}
+      {hasEstimate && <circle
         cx={cx} cy={cy} r={r - 3}
         fill="none" stroke={podColor} strokeWidth="3"
         strokeDasharray={circumference}
@@ -53,9 +57,10 @@ function PodCircle({ cx, cy, r, saturation, slot, currentSlot, label }) {
         strokeLinecap="round"
         transform={`rotate(-90 ${cx} ${cy})`}
         opacity="0.85"
-      />
+      />}
       <text x={cx} y={cy - 2} textAnchor="middle" fontSize="7.5" fill="#cbd5e1" fontFamily="JetBrains Mono" fontWeight="600">{label}</text>
-      <text x={cx} y={cy + 9} textAnchor="middle" fontSize="9" fill={podColor} fontFamily="JetBrains Mono" fontWeight="700">{saturation.toFixed(0)}%</text>
+      <text x={cx} y={cy + 8} textAnchor="middle" fontSize="8.5" fill={podColor} fontFamily="JetBrains Mono" fontWeight="700">{hasEstimate ? `${boundedFill.toFixed(0)}%` : '--'}</text>
+      <text x={cx} y={cy + 14} textAnchor="middle" fontSize="4.5" fill="#94a3b8" fontFamily="JetBrains Mono">TIME</text>
       {isActive && (
         <circle cx={cx} cy={cy} r={r + 3} fill="none" stroke={podColor} strokeWidth="1" opacity="0.4">
           <animate attributeName="r" values={`${r + 2};${r + 6};${r + 2}`} dur="2s" repeatCount="indefinite" />
@@ -80,7 +85,7 @@ function FlowLine({ points, active, color }) {
 
 export default function DigitalTwin() {
   const { state } = useHylex();
-  const { servo1, servo2, servo3, servo4, carouselAngle, podSaturation, carouselSlot, routeClean, relay1, relay2, relay3, mode, wsStatus } = state;
+  const { servo1, servo2, servo3, servo4, carouselAngle, podSaturation, carouselSlot, routeClean, relay1, relay2, relay3, mode, wsStatus, processState, podLoad } = state;
   const isLiveOffline = mode === 'live' && wsStatus !== 'connected';
 
   const W = 320;
@@ -92,32 +97,32 @@ export default function DigitalTwin() {
   const carCY = 330;
   const carR  = 44;
   const podR  = 16.5;
+  const displayCarouselAngle = carouselAngle + (processState === 4 ? podLoad * 1.2 : 0);
 
   // Pod positions (120° apart)
   const pods = [0, 1, 2].map(i => {
-    const angle = ((i * 120 + carouselAngle) - 90) * (Math.PI / 180);
+    const angle = ((i * 120 + displayCarouselAngle) - 90) * (Math.PI / 180);
     return {
       cx: carCX + carR * Math.cos(angle),
       cy: carCY + carR * Math.sin(angle),
-      saturation: podSaturation[i],
+      runtimeFillPct: isLiveOffline ? null : podSaturation[i],
       label: `Pod #${i + 1}`,
       slot: i,
     };
   });
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/85 backdrop-blur-sm p-3 flex flex-col h-full overflow-hidden shadow-sm">
+    <div className="hylex-panel rounded-[22px] p-4 sm:p-5 flex flex-col h-full overflow-hidden shadow-sm">
       {/* Top Header */}
       <div className="flex items-center justify-between mb-2 flex-shrink-0">
-        <div>
-          <span className="text-xs font-sans font-semibold text-white tracking-wide">
-            4-Tier Tower Schematic
-          </span>
-          <div className="text-[10px] text-slate-400 font-sans">
-            Membraneless hydro-cyclone &amp; electrochemical crystallization
+        <div className="flex items-center gap-3">
+          <span className="w-9 h-9 rounded-xl grid place-items-center bg-cyan-300/8 border border-cyan-200/10 text-cyan-200"><Workflow size={16} strokeWidth={1.8} /></span>
+          <div>
+            <span className="text-sm font-semibold text-white tracking-tight">Process map</span>
+            <div className="text-[10px] text-slate-500 mt-0.5">Live system layout</div>
           </div>
         </div>
-        <span className="text-[10px] text-cyan-300 font-mono px-2 py-0.5 rounded-full bg-cyan-500/10 border border-cyan-500/30">
+        <span className="text-[10px] text-slate-400 font-medium px-3 py-1.5 rounded-full bg-white/[.035] border border-white/[.07]">
           450mm Column
         </span>
       </div>
@@ -146,11 +151,11 @@ export default function DigitalTwin() {
           Stage 2: Membraneless Vortex Helix
         </text>
 
-        {/* 10mm Brass Splitter & Tangential Nozzle Indicators */}
+        {/* 10mm 3-way Y-splitter feeds the dual 15-degree angled sockets */}
         <rect x="52" y="24" width="16" height="6" rx="2" fill="#ca8a04" stroke="#eab308" strokeWidth="0.8" />
         <rect x="252" y="24" width="16" height="6" rx="2" fill="#ca8a04" stroke="#eab308" strokeWidth="0.8" />
-        <text x="60" y="22" textAnchor="middle" fontSize="6" fill="#eab308" fontFamily="JetBrains Mono">90° Nozzle</text>
-        <text x="260" y="22" textAnchor="middle" fontSize="6" fill="#eab308" fontFamily="JetBrains Mono">90° Nozzle</text>
+        <text x="60" y="22" textAnchor="middle" fontSize="6" fill="#eab308" fontFamily="JetBrains Mono">15° INLET</text>
+        <text x="260" y="22" textAnchor="middle" fontSize="6" fill="#eab308" fontFamily="JetBrains Mono">15° INLET</text>
 
         {/* 90mm Acrylic Cylinder */}
         <rect x="68" y="16" width="184" height="88" rx="8" fill="url(#cyl-grad)" stroke="#22d3ee" strokeWidth="1.2" opacity="0.85" />
@@ -204,14 +209,14 @@ export default function DigitalTwin() {
         {/* Gravity TDS sensor readout pill */}
         <rect x="95" y="130" width="130" height="19" rx="4" fill="#0f172a" stroke={isLiveOffline ? '#475569' : '#22d3ee'} strokeWidth="0.9" />
         <text x={MX} y="143" textAnchor="middle" fontSize="8" fill={isLiveOffline ? '#94a3b8' : '#22d3ee'} fontFamily="JetBrains Mono" fontWeight="600">
-          {isLiveOffline ? 'TDS 0 ppm · 0.0°C (OFFLINE)' : `TDS ${state.tds.toFixed(0)} ppm · ${state.tempC.toFixed(1)}°C`}
+          {isLiveOffline ? 'SENSORS OFFLINE' : `TDS ${state.tdsValid ? `${state.tds.toFixed(0)} ppm` : 'CHECK PROBE'} · ${state.tempValid ? `${state.tempC.toFixed(1)}°C` : 'TEMP N/A'}`}
         </text>
 
         {/* 4 Servos: Evenly spaced (S1, S2, S3, S4) */}
-        <ServoArc cx={78}  cy={176} r={17} angle={servo1} color="#22d3ee" label="S1 BackP" />
-        <ServoArc cx={132} cy={176} r={17} angle={servo2} color="#fbbf24" label="S2 Chute" />
-        <ServoArc cx={188} cy={176} r={17} angle={servo3} color="#34d399" label="S3 Clean" />
-        <ServoArc cx={242} cy={176} r={17} angle={servo4} color="#f87171" label="S4 Brine" />
+        <ServoArc cx={78}  cy={176} r={17} angle={isLiveOffline ? null : servo1} color="#22d3ee" label="S1 CMD" />
+        <ServoArc cx={132} cy={176} r={17} angle={isLiveOffline ? null : servo2} color="#fbbf24" label="S2 CMD" />
+        <ServoArc cx={188} cy={176} r={17} angle={isLiveOffline ? null : servo3} color="#34d399" label="S3 CMD" />
+        <ServoArc cx={242} cy={176} r={17} angle={isLiveOffline ? null : servo4} color="#f87171" label="S4 CMD" />
 
         {/* Inter-tier connector pipe */}
         <line x1={MX} y1="231" x2={MX} y2="252" stroke="#334155" strokeWidth="6" strokeLinecap="round" />
@@ -226,11 +231,14 @@ export default function DigitalTwin() {
 
         {/* Stepper motor drive badge */}
         <text x="75" y="262" fontSize="6.5" fill="#a855f7" fontFamily="JetBrains Mono">28BYJ-48 Stepper</text>
+        <text x="205" y="262" fontSize="6.5" fill={processState === 4 ? '#fbbf24' : '#64748b'} fontFamily="JetBrains Mono">
+          {processState === 4 ? `INDEXING ${Math.round(podLoad)}%` : 'FILL % IS ESTIMATED'}
+        </text>
 
         {/* Carousel outer ring + gear teeth */}
         <circle cx={carCX} cy={carCY} r={carR + podR + 5} fill="#070e1a" stroke="#1e293b" strokeWidth="1.2" />
         {Array.from({ length: 12 }).map((_, i) => {
-          const a = (i * 30 + carouselAngle * 0.5) * Math.PI / 180;
+          const a = (i * 30 + displayCarouselAngle * 0.5) * Math.PI / 180;
           const r1 = carR + podR + 4;
           const r2 = carR + podR + 9;
           return (
@@ -244,7 +252,7 @@ export default function DigitalTwin() {
 
         {/* Spokes */}
         {[0, 1, 2].map(i => {
-          const a = ((i * 120 + carouselAngle) - 90) * Math.PI / 180;
+          const a = ((i * 120 + displayCarouselAngle) - 90) * Math.PI / 180;
           return (
             <line key={i}
               x1={carCX} y1={carCY}
@@ -256,18 +264,20 @@ export default function DigitalTwin() {
 
         {/* Hub */}
         <circle cx={carCX} cy={carCY} r={11} fill="#1e293b" stroke="#334155" strokeWidth="1" />
-        <text x={carCX} y={carCY + 4} textAnchor="middle" fontSize="6.5" fill={relay2 ? '#fbbf24' : '#475569'} fontFamily="JetBrains Mono" fontWeight="bold">12V EC</text>
+        <text x={carCX} y={carCY + 4} textAnchor="middle" fontSize="6.5" fill="#94a3b8" fontFamily="JetBrains Mono" fontWeight="bold">INDEX</text>
 
         {/* 3 Pod Circles */}
         {pods.map((pod, i) => (
           <PodCircle key={i} cx={pod.cx} cy={pod.cy} r={podR}
-            saturation={pod.saturation} slot={pod.slot}
-            currentSlot={carouselSlot} label={pod.label} />
+            runtimeFillPct={pod.runtimeFillPct} slot={pod.slot}
+            currentSlot={isLiveOffline ? -1 : carouselSlot} label={pod.label} />
         ))}
 
         {/* Active Pod status */}
         <text x={carCX} y="405" textAnchor="middle" fontSize="7" fill="#cbd5e1" fontFamily="JetBrains Mono">
-          Active: Pod #{carouselSlot + 1} {relay2 ? '(Graphite +12V / SS304 -12V)' : '(Circuits Standby)'}
+          {isLiveOffline
+            ? 'Carousel position unavailable · no live telemetry'
+            : `Active: Pod #${carouselSlot + 1} · Pod EC ${relay2 ? 'ON' : 'OFF'} · fill est. ${podSaturation[carouselSlot].toFixed(0)}%`}
         </text>
 
         {/* Connector to tanks */}
@@ -280,7 +290,7 @@ export default function DigitalTwin() {
           Stage 1 &amp; 3: Dual Reservoir Base
         </text>
 
-        {/* Fluid routing flow lines */}
+        {/* Illustrative flow paths follow the ESP32 pump and gate commands. */}
         <FlowLine
           points={[[MX, 434], [MX - 18, 444], [85, 450], [85, 465]]}
           active={relay1 && !routeClean} color="#f87171"
@@ -293,18 +303,16 @@ export default function DigitalTwin() {
         {/* Tank A (Base Brine Reservoir - Stage 1) */}
         {(() => {
           const ty = 466; const tw = 126; const th = 118; const tx = 18;
-          const fillH = th * (routeClean ? 0.35 : 0.65);
+          const fillH = th * 0.5;
           return (
             <g>
               <rect x={tx} y={ty} width={tw} height={th} rx="7"
                 fill="url(#tank-a-grad)"
-                stroke={!routeClean ? '#f87171' : '#334155'}
-                strokeWidth={!routeClean ? 1.6 : 1} />
+                stroke={isLiveOffline ? '#334155' : !routeClean ? '#f87171' : '#334155'}
+                strokeWidth={!isLiveOffline && !routeClean ? 1.6 : 1} />
               
-              {/* Dynamic fluid level */}
-              <rect x={tx + 2} y={ty + th - fillH} width={tw - 4} height={fillH} rx="5" fill="#f87171" opacity="0.15">
-                <animate attributeName="height" values={`${fillH * 0.9};${fillH};${fillH * 0.9}`} dur="6s" repeatCount="indefinite" />
-              </rect>
+              {/* Illustrative fill; this prototype has no tank level sensor. */}
+              <rect x={tx + 2} y={ty + th - fillH} width={tw - 4} height={fillH} rx="5" fill="#f87171" opacity="0.10" />
 
               <text x={tx + tw / 2} y={ty + 16} textAnchor="middle" fontSize="8" fill="#f87171" fontFamily="JetBrains Mono" fontWeight="700">
                 TANK A
@@ -313,7 +321,7 @@ export default function DigitalTwin() {
                 Base Brine Reservoir
               </text>
               <text x={tx + tw / 2} y={ty + 39} textAnchor="middle" fontSize="6.5" fill="#94a3b8" fontFamily="JetBrains Mono">
-                12V Pump · 240–400 L/hr
+                LEVEL NOT MEASURED
               </text>
 
               {/* Submerged Electro-Coagulation Animation */}
@@ -326,7 +334,7 @@ export default function DigitalTwin() {
                     </line>
                   ))}
                   <text x={tx + tw / 2} y={ty + 106} textAnchor="middle" fontSize="6.5" fill="#fbbf24" fontFamily="JetBrains Mono" fontWeight="bold">
-                    ⚡ EC PRE-TREAT ACTIVE
+                    ⚡ TANK ELECTRODES ACTIVE
                   </text>
                 </>
               )}
@@ -339,39 +347,37 @@ export default function DigitalTwin() {
           );
         })()}
 
-        {/* Tank B (Verified Clean Store - Stage 3) */}
+        {/* Tank B (reuse target store - Stage 3) */}
         {(() => {
           const ty = 466; const tw = 126; const th = 118; const tx = W - tw - 18;
-          const fillH = th * (routeClean ? 0.65 : 0.35);
+          const fillH = th * 0.5;
           return (
             <g>
               <rect x={tx} y={ty} width={tw} height={th} rx="7"
                 fill="url(#tank-b-grad)"
-                stroke={routeClean ? '#34d399' : '#334155'}
-                strokeWidth={routeClean ? 1.6 : 1} />
+                stroke={!isLiveOffline && routeClean ? '#34d399' : '#334155'}
+                strokeWidth={!isLiveOffline && routeClean ? 1.6 : 1} />
 
-              {/* Dynamic fluid level */}
-              <rect x={tx + 2} y={ty + th - fillH} width={tw - 4} height={fillH} rx="5" fill="#34d399" opacity="0.15">
-                <animate attributeName="height" values={`${fillH * 0.9};${fillH};${fillH * 0.9}`} dur="7s" repeatCount="indefinite" />
-              </rect>
+              {/* Illustrative fill; this prototype has no tank level sensor. */}
+              <rect x={tx + 2} y={ty + th - fillH} width={tw - 4} height={fillH} rx="5" fill="#34d399" opacity="0.10" />
 
               <text x={tx + tw / 2} y={ty + 16} textAnchor="middle" fontSize="8" fill="#34d399" fontFamily="JetBrains Mono" fontWeight="700">
                 TANK B
               </text>
               <text x={tx + tw / 2} y={ty + 28} textAnchor="middle" fontSize="7" fill="#cbd5e1" fontFamily="Inter, sans-serif">
-                Clean Potable Store
+                Reuse Target Tank
               </text>
               <text x={tx + tw / 2} y={ty + 39} textAnchor="middle" fontSize="6.5" fill="#94a3b8" fontFamily="JetBrains Mono">
-                ≤500 ppm Dubai Benchmark
+                ≤500 ppm reuse threshold
               </text>
 
               {routeClean && relay1 && (
                 <text x={tx + tw / 2} y={ty + 88} textAnchor="middle" fontSize="8" fill="#34d399" fontFamily="JetBrains Mono" fontWeight="bold">
-                  ✓ CLEAN FILLING
+                  ✓ REUSE ROUTE OPEN
                 </text>
               )}
               <text x={tx + tw / 2} y={ty + 106} textAnchor="middle" fontSize="6.5" fill="#10b981" fontFamily="JetBrains Mono" fontWeight="bold">
-                UN SDG 6.3/6.4 Verified
+                500 PPM PROTOTYPE TARGET
               </text>
             </g>
           );

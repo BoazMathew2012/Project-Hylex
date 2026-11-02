@@ -1,4 +1,4 @@
-import { useHylex } from '../store/HylexContext';
+import { useHylex } from '../store/hooks';
 import { useMemo, useState } from 'react';
 import BarChart2 from 'lucide-react/dist/esm/icons/bar-chart-2.mjs';
 import { SYNOPSIS } from '../store/synopsis';
@@ -13,37 +13,38 @@ const PAD = { left: 48, right: 20, top: 20, bottom: 32 };
 const cW  = W - PAD.left - PAD.right;
 const cH  = H - PAD.top  - PAD.bottom;
 
-function RealtimeChart({ history, showIndustrial, isLiveOffline }) {
+function RealtimeChart({ history, showIndustrial, isLiveOffline, tdsValid, tempValid }) {
   const maxY     = showIndustrial ? INDUSTRIAL_RAW * 1.05 : 1000;
   const threshold = showIndustrial ? IND_TARGET : THRESHOLD;
+  const windowStart = history?.length ? history[history.length - 1].t - 30000 : 0;
 
   const points = useMemo(() => {
     if (!history || history.length < 2) return '';
-    const n = history.length;
-    return history.map((pt, i) => {
-      const x = PAD.left + (i / (n - 1)) * cW;
+    return history.map((pt) => {
+      const x = PAD.left + ((pt.t - windowStart) / 30000) * cW;
       const v = showIndustrial ? pt.industrial : pt.tds;
       const y = PAD.top + cH * (1 - v / maxY);
       return `${x},${y}`;
     }).join(' ');
-  }, [history, showIndustrial, maxY]);
+  }, [history, showIndustrial, maxY, windowStart]);
 
   const areaPath = useMemo(() => {
     if (!history || history.length < 2) return '';
-    const lp = history.map((pt, i) => {
-      const x = PAD.left + (i / (history.length - 1)) * cW;
+    const lp = history.map((pt) => {
+      const x = PAD.left + ((pt.t - windowStart) / 30000) * cW;
       const v = showIndustrial ? pt.industrial : pt.tds;
       const y = PAD.top + cH * (1 - v / maxY);
       return `${x},${y}`;
     });
     return `M${PAD.left},${PAD.top + cH} L${lp.join(' L')} L${PAD.left + cW},${PAD.top + cH} Z`;
-  }, [history, showIndustrial, maxY]);
+  }, [history, showIndustrial, maxY, windowStart]);
 
   const thresholdY = PAD.top + cH * (1 - threshold / maxY);
   const lastPt     = history[history.length - 1];
   const currentVal = lastPt ? (showIndustrial ? lastPt.industrial : lastPt.tds) : 0;
-  const isSafe     = showIndustrial ? currentVal <= IND_TARGET : currentVal <= THRESHOLD;
-  const accent     = isSafe ? '#34d399' : '#f87171';
+  const isSafe     = lastPt ? (showIndustrial ? currentVal <= IND_TARGET : currentVal <= THRESHOLD) : null;
+  const accent     = isSafe === null ? '#68819a' : isSafe ? '#65d8ae' : '#f28b83';
+  const thresholdColor = isSafe === null ? '#70839a' : isSafe ? '#65d8ae' : '#f28b83';
 
   const yTicks = showIndustrial
     ? [0, 17500, 35000, 52500, 70000]
@@ -52,7 +53,7 @@ function RealtimeChart({ history, showIndustrial, isLiveOffline }) {
     ? v => `${(v / 1000).toFixed(0)}k`
     : v => `${v}`;
 
-  const xLabels = ['-60s', '-45s', '-30s', '-15s', 'NOW'];
+  const xLabels = ['-30s', '-22.5s', '-15s', '-7.5s', 'NOW'];
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full flex-1">
@@ -76,23 +77,33 @@ function RealtimeChart({ history, showIndustrial, isLiveOffline }) {
 
       {/* Threshold line */}
       <line x1={PAD.left} y1={thresholdY} x2={W - PAD.right} y2={thresholdY}
-        stroke={isSafe ? '#34d399' : '#f87171'} strokeWidth="1.4" strokeDasharray="5 3" opacity="0.8" />
-      <text x={W - PAD.right - 4} y={thresholdY - 5} textAnchor="end" fontSize="8.5" fill={isSafe ? '#34d399' : '#f87171'} fontFamily="JetBrains Mono" fontWeight="600">
-        {showIndustrial ? '38,500 ppm — Hylex Target' : '500 ppm — Dubai Potable Standard'}
+        stroke={thresholdColor} strokeWidth="1.2" strokeDasharray="5 4" opacity="0.78" />
+      <text x={W - PAD.right - 4} y={thresholdY - 6} textAnchor="end" fontSize="8.5" fill={thresholdColor} fontFamily="JetBrains Mono" fontWeight="600">
+        {showIndustrial ? '38,500 ppm target' : '500 ppm target'}
       </text>
 
       {/* Empty / offline status notice */}
-      {(!history || history.length === 0) && (
-        <text
-          x={PAD.left + cW / 2}
-          y={PAD.top + cH / 2}
-          textAnchor="middle"
-          fontSize="9.5"
-          fill="#64748b"
-          fontFamily="JetBrains Mono"
-        >
-          {isLiveOffline ? 'ESP32 Offline · All Numerics 0 · Click Connect to stream' : 'Awaiting telemetry packets…'}
-        </text>
+      {(!history || history.length < 2) && (
+        <g>
+          <rect x={PAD.left + cW / 2 - 113} y={PAD.top + cH * 0.36 - 13} width="226" height="26" rx="13" fill="#0b1422" stroke="#253249" strokeWidth="1" />
+          <text
+            x={PAD.left + cW / 2}
+            y={PAD.top + cH * 0.36 + 3}
+            textAnchor="middle"
+            fontSize="9.5"
+            fill="#9aabc1"
+            fontFamily="Inter, sans-serif"
+            fontWeight="500"
+          >
+            {isLiveOffline
+              ? 'Waiting for ESP32 connection'
+              : !tdsValid
+                ? 'Check TDS probe'
+                : !tempValid
+                  ? 'Check temperature sensor'
+                  : 'Collecting live samples…'}
+          </text>
+        </g>
       )}
 
       {/* Area + line */}
@@ -131,30 +142,26 @@ function RealtimeChart({ history, showIndustrial, isLiveOffline }) {
   );
 }
 
-// 4-stage industrial trajectory — accurate to synopsis process flow
+// Scenario view: the industrial values are synopsis targets, not prototype data.
 function IndustrialTrajectory({ currentTds }) {
-  const stages = [
-    { label: 'Stage 1 — EC Pre-treat',  ppm: 70000, color: '#ef4444', note: 'Raw brine + NaHCO₃' },
-    { label: 'Stage 2 — Vortex Sep.',    ppm: 55000, color: '#f97316', note: 'Helix centrifuge' },
-    { label: 'Stage 3 — EC Crystallise', ppm: 42000, color: '#fbbf24', note: 'Graphite anode pod' },
-    { label: 'Stage 4 — Hylex Output',   ppm: Math.round(currentTds * SYNOPSIS.industrial_scale), color: '#34d399', note: 'Tank B verified' },
-  ];
-  const max = 70000;
+  const outputEstimate = Number.isFinite(currentTds) ? Math.round(currentTds * SYNOPSIS.industrial_scale) : null;
   return (
-    <div className="grid grid-cols-4 gap-2 mt-2">
-      {stages.map((s, i) => (
-        <div key={i} className="bg-slate-950/60 border border-slate-800 rounded-lg p-2.5">
-          <div className="text-[10px] text-slate-300 font-sans font-medium">{s.label}</div>
-          <div className="text-[9px] text-slate-500 font-sans mb-1.5">{s.note}</div>
-          <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
-            <div className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${(s.ppm / max) * 100}%`, background: s.color }} />
-          </div>
-          <div className="text-xs font-mono font-bold mt-1.5" style={{ color: s.color }}>
-            {s.ppm >= 1000 ? `${(s.ppm / 1000).toFixed(1)}k` : s.ppm} ppm
-          </div>
-        </div>
-      ))}
+    <div className="grid grid-cols-3 gap-2 mt-2">
+      <div className="bg-slate-950/60 border border-slate-800 rounded-lg p-2.5">
+        <div className="text-[10px] text-slate-300 font-sans font-medium">Synopsis reference feed</div>
+        <div className="text-xs font-mono font-bold mt-1.5 text-red-300">70,000 ppm</div>
+      </div>
+      <div className="bg-slate-950/60 border border-cyan-500/20 rounded-lg p-2.5">
+        <div className="text-[10px] text-slate-300 font-sans font-medium">82.35× scale-model output</div>
+        <div className="text-xs font-mono font-bold mt-1.5 text-cyan-300">{outputEstimate === null ? '--' : `${outputEstimate.toLocaleString()} ppm`}</div>
+      </div>
+      <div className="bg-slate-950/60 border border-slate-800 rounded-lg p-2.5">
+        <div className="text-[10px] text-slate-300 font-sans font-medium">Synopsis target</div>
+        <div className="text-xs font-mono font-bold mt-1.5 text-emerald-300">38,500 ppm</div>
+      </div>
+      <div className="col-span-3 text-[9px] text-slate-500 font-sans text-center">
+        Illustrative industrial scenario only · intermediate removal and full-scale performance are not measured by this prototype.
+      </div>
     </div>
   );
 }
@@ -162,34 +169,30 @@ function IndustrialTrajectory({ currentTds }) {
 export default function TelemetryChart() {
   const { state } = useHylex();
   const [showIndustrial, setShowIndustrial] = useState(false);
-  const { chartHistory, tds, tempC, mode, wsStatus } = state;
+  const { chartHistory, tds, tdsValid, tempValid, mode, wsStatus } = state;
   const isLiveOffline = mode === 'live' && wsStatus !== 'connected';
 
-  const minTds = chartHistory.length ? Math.min(...chartHistory.map(p => p.tds)).toFixed(0) : (tds === 0 ? '0' : '--');
-  const maxTds = chartHistory.length ? Math.max(...chartHistory.map(p => p.tds)).toFixed(0) : (tds === 0 ? '0' : '--');
   const avgTds = chartHistory.length
-    ? (chartHistory.reduce((a, p) => a + p.tds, 0) / chartHistory.length).toFixed(0) : (tds === 0 ? '0' : '--');
-  const compEC25 = tds > 0 && (1 + 0.02 * (tempC - 25)) > 0 ? (tds / (1 + 0.02 * (tempC - 25))).toFixed(0) : '0';
+    ? (chartHistory.reduce((a, p) => a + p.tds, 0) / chartHistory.length).toFixed(0) : (tdsValid ? tds.toFixed(0) : '--');
 
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900/85 backdrop-blur-sm p-3.5 flex flex-col justify-between h-full shadow-sm">
+    <div className="hylex-panel rounded-[22px] p-4 sm:p-5 flex flex-col justify-between h-full shadow-sm overflow-hidden">
 
       {/* Header */}
       <div className="flex items-center justify-between flex-shrink-0 mb-1.5">
         <div className="flex items-center gap-2">
-          <div className="p-1.5 rounded-lg bg-cyan-500/10 border border-cyan-500/25 text-cyan-400">
-            <BarChart2 size={14} />
+          <div className="w-9 h-9 grid place-items-center rounded-xl bg-cyan-300/8 border border-cyan-200/10 text-cyan-200">
+            <BarChart2 size={16} strokeWidth={1.8} />
           </div>
           <div>
-            <span className="text-xs font-sans font-semibold text-white tracking-wide">
-              Live Salinity &amp; Thermal Telemetry
-            </span>
-            <div className="text-[10px] text-slate-400 font-sans">
-              {showIndustrial
-                ? `Industrial Trajectory: 70,000 → 38,500 ppm (${SYNOPSIS.cost_reduction_pct_min}–${SYNOPSIS.cost_reduction_pct_max}% OPEX reduction)`
-                : 'Continuous 60-second Gravity TDS window vs 500 ppm potable threshold'}
-            </div>
+            <span className="text-sm font-semibold text-white tracking-tight">Water quality</span>
+            <div className="mt-0.5 text-[10px] text-slate-500">Live salinity trend</div>
           </div>
+        </div>
+
+        <div className={`hidden sm:flex items-center gap-2 mr-auto ml-4 px-2.5 py-1.5 rounded-full border text-[10px] font-medium ${isLiveOffline ? 'border-rose-300/10 bg-rose-300/[.05] text-rose-200/80' : tdsValid && tempValid ? 'border-emerald-300/10 bg-emerald-300/[.05] text-emerald-200/80' : 'border-white/[.07] bg-white/[.025] text-slate-400'}`}>
+          <span className={`h-1.5 w-1.5 rounded-full ${isLiveOffline ? 'bg-rose-300' : tdsValid && tempValid ? 'bg-emerald-300' : 'bg-slate-500'}`} />
+          {isLiveOffline ? 'Awaiting connection' : tdsValid && tempValid ? 'Sensors active' : 'Waiting for sensor data'}
         </div>
 
         {/* View Switcher Pill */}
@@ -197,48 +200,46 @@ export default function TelemetryChart() {
           <button
             type="button"
             onClick={() => setShowIndustrial(false)}
-            className={`px-2.5 py-1 rounded text-xs font-sans font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded-full text-[11px] font-medium transition-all ${
               !showIndustrial
-                ? 'bg-slate-800 text-cyan-300 border border-cyan-500/30'
+                ? 'bg-white/[.09] text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            Benchtop (1k)
+            Prototype
           </button>
           <button
             type="button"
             onClick={() => setShowIndustrial(true)}
-            className={`px-2.5 py-1 rounded text-xs font-sans font-medium transition-colors ${
+            className={`px-3 py-1.5 rounded-full text-[11px] font-medium transition-all ${
               showIndustrial
-                ? 'bg-slate-800 text-amber-300 border border-amber-500/30'
+                ? 'bg-white/[.09] text-white shadow-sm'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            Industrial (70k)
+            Scale scenario
           </button>
         </div>
       </div>
 
       {/* Chart Canvas */}
       <div className="flex-1 min-h-0 flex flex-col my-1">
-        <RealtimeChart history={chartHistory} showIndustrial={showIndustrial} isLiveOffline={isLiveOffline} />
+        <RealtimeChart history={chartHistory} showIndustrial={showIndustrial} isLiveOffline={isLiveOffline} tdsValid={tdsValid} tempValid={tempValid} />
       </div>
 
       {/* Bottom Summary Bar or Industrial Stages */}
       {showIndustrial ? (
-        <IndustrialTrajectory currentTds={tds} />
+        <IndustrialTrajectory currentTds={tdsValid && tempValid ? tds : null} />
       ) : (
-        <div className="grid grid-cols-5 gap-2 pt-2 border-t border-slate-800 flex-shrink-0">
+        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-slate-800 flex-shrink-0">
           {[
-            { label: 'Minimum TDS', val: `${minTds} ppm`, color: 'text-emerald-400' },
-            { label: 'Maximum TDS', val: `${maxTds} ppm`, color: 'text-red-400' },
-            { label: 'Average TDS', val: `${avgTds} ppm`, color: 'text-cyan-400' },
-            { label: 'Fluid Temp', val: `${tempC.toFixed(1)}°C`, color: 'text-amber-400' },
-            { label: 'Compensated EC₂₅', val: `${compEC25} ppm`, color: 'text-purple-400' },
+            { label: 'Current', val: tdsValid ? `${tds.toFixed(0)} ppm` : '—', color: 'text-cyan-300' },
+            { label: 'Average', val: `${avgTds} ppm`, color: 'text-slate-200' },
+            { label: 'Reuse goal', val: `≤${THRESHOLD} ppm`, color: 'text-emerald-300' },
           ].map(s => (
-            <div key={s.label} className="bg-slate-950/60 border border-slate-800/80 rounded-lg px-2.5 py-1.5 text-center">
-              <div className="text-[10px] text-slate-400 font-sans font-medium truncate">{s.label}</div>
-              <div className={`text-xs font-mono font-bold ${s.color} truncate mt-0.5`}>{s.val}</div>
+          <div key={s.label} className="rounded-xl border border-white/[.055] bg-slate-950/35 px-3 py-2 text-center">
+            <div className="text-[9px] text-slate-500 font-medium uppercase tracking-[.12em] truncate">{s.label}</div>
+            <div className={`text-[13px] font-mono font-semibold ${s.color} truncate mt-1`}>{s.val}</div>
             </div>
           ))}
         </div>
