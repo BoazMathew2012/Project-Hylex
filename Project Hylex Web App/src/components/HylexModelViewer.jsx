@@ -120,18 +120,6 @@ export default function HylexModelViewer() {
         }
       });
       scene.add(model);
-      const fittedBounds = new THREE.Box3().setFromObject(model);
-      const fittedSize = fittedBounds.getSize(new THREE.Vector3());
-      const floorY = fittedBounds.min.y - 0.018;
-      const stageRadius = Math.max(fittedSize.x, fittedSize.z, 0.72) * 0.52;
-      const ground = new THREE.Mesh(
-        new THREE.CircleGeometry(stageRadius, 96),
-        new THREE.MeshStandardMaterial({ color: '#080d17', roughness: 0.94, metalness: 0.02 }),
-      );
-      ground.rotation.x = -Math.PI / 2;
-      ground.position.y = floorY;
-      ground.receiveShadow = true;
-      scene.add(ground);
       const distance = 2.05;
       sceneRef.current = { controls, camera, distance };
       camera.position.set(distance * 1.7, distance * 1.18, distance * 2.2);
